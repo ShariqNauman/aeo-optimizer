@@ -2,11 +2,13 @@ from langgraph.graph import StateGraph, START, END
 from src.state import AEOState
 from src.agents.web_researcher import web_researcher
 from src.agents.data_aggregation import data_aggregation
+from src.agents.ai_simulator import ai_simulator
+from src.agents.gap_analyzer import gap_analyzer
 
 
 # ── Stub Node Functions ───────────────────────────────────────────────
 # Remaining stubs will be replaced in later phases.
-# Web Researcher and Data Aggregation are now real agents (imported above).
+# Real agents: Web Researcher, Data Aggregation, AI Simulator, Gap Analyzer.
 # ──────────────────────────────────────────────────────────────────────
 
 def input_handler(state: AEOState) -> dict:
@@ -15,41 +17,12 @@ def input_handler(state: AEOState) -> dict:
     Validates and prepares the input data.
     """
     print("\n>> [Input Handler] Received input")
-    print(f"   Hotel/URL: {state.get('hotel_name_or_url', 'N/A')}")
+    print(f"   Hotel URL: {state.get('hotel_url', 'N/A')}")
     print(f"   Query:     {state.get('traveller_query', 'N/A')}")
     return {}
 
 
-def ai_simulator(state: AEOState) -> dict:
-    """
-    Agent 2: AI Decision Simulator
-    Simulates an AI travel agent evaluating the hotel.
-    """
-    print("\n>> [Agent 2: AI Simulator] Evaluating hotel...")
-    return {
-        "evaluation_score": 50,
-        "evaluation_reasoning": "Stub: no real evaluation yet",
-        "sub_scores": {
-            "relevance": 50,
-            "completeness": 50,
-            "trust_signals": 50,
-            "value_proposition": 50,
-            "structured_data_quality": 50,
-        },
-    }
-
-
-def gap_analyzer(state: AEOState) -> dict:
-    """
-    Agent 2.5: Gap Analyzer
-    Identifies weaknesses in the hotel profile.
-    """
-    print("\n>> [Agent 2.5: Gap Analyzer] Identifying gaps...")
-    return {
-        "gaps": [
-            {"category": "stub", "description": "This is a placeholder gap", "severity": "medium"}
-        ]
-    }
+# ai_simulator and gap_analyzer are imported from src.agents above.
 
 
 def optimizer(state: AEOState) -> dict:
@@ -106,7 +79,7 @@ def build_graph():
     The flow:
         START -> Input Handler -> Web Researcher -> Data Aggregation
               -> AI Simulator -> Gap Analyzer -> Optimizer -> Validator
-              -> Human Approval -> Re-simulator -> END
+              -> Re-simulator -> Human Approval -> END
     
     Returns:
         CompiledGraph: Ready to invoke with .invoke(initial_state)
@@ -132,9 +105,9 @@ def build_graph():
     workflow.add_edge("ai_simulator", "gap_analyzer")
     workflow.add_edge("gap_analyzer", "optimizer")
     workflow.add_edge("optimizer", "validator")
-    workflow.add_edge("validator", "human_approval")       
-    workflow.add_edge("human_approval", "resimulator")
-    workflow.add_edge("resimulator", END)
+    workflow.add_edge("validator", "resimulator")
+    workflow.add_edge("resimulator", "human_approval")       
+    workflow.add_edge("human_approval", END)
     
     # ── Compile the graph ──
     graph = workflow.compile()

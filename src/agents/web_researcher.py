@@ -1,171 +1,114 @@
 """
 Web Researcher Agent
 =====================
-Scrapes/searches the internet for hotel data from credible sources.
+Scrapes a given hotel website using Firecrawl to gather data.
 
-Two modes:
-  - URL provided   -> scrape that page directly
-  - Hotel name     -> search DuckDuckGo, scrape top results
+Mode:
+  - Takes a specific hotel URL and crawls it (up to a small limit of pages)
+  - Extracts the markdown content to feed into the LLM
 
-Returns raw text content + list of source URLs.
+Returns raw text content + list of crawled source URLs.
 """
 
 import os
 import re
-from ddgs import DDGS
 from firecrawl import FirecrawlApp
 from src.state import AEOState
 
 
 # Max characters to extract per page (to avoid token overflow when sent to LLM)
-MAX_CONTENT_LENGTH = 10000 # Increased since markdown is denser
+MAX_CONTENT_LENGTH = 10000 
 
 
-def is_url(text: str) -> bool:
-    """Check if the input looks like a URL."""
-    return bool(re.match(r"https?://", text.strip()))
-
-
-def scrape_url(url: str) -> str:
+def crawl_hotel_site(url: str) -> tuple[list[dict], list[str]]:
     """
-    Scrape a single URL using Firecrawl and return markdown content.
+    Crawl a hotel URL using Firecrawl and return markdown content from multiple pages.
     """
     api_key = os.getenv("FIRECRAWL_API_KEY")
     if not api_key:
         print("   [Error] FIRECRAWL_API_KEY is not set in .env")
-        return f"[Failed to scrape {url}: Missing FIRECRAWL_API_KEY]"
+        return [{"url": url, "title": "Error", "snippet": "", "content": f"[Failed to crawl: Missing FIRECRAWL_API_KEY]"}], []
     
     try:
         app = FirecrawlApp(api_key=api_key)
-        # In firecrawl-py 1.0+, it's .scrape and returns a Document object
-        doc = app.scrape(url, formats=['markdown'])
         
-        # Extract markdown from Document object
-        content = getattr(doc, 'markdown', "")
-        if not content:
-            content = str(doc)
+        print(f"   [Firecrawl] Crawling {url} (this may take a minute)...")
+        # Crawl the site up to 4 pages to get comprehensive info without exploding token count
+        job = app.crawl(
+            url, 
+            limit=4, 
+            scrape_options={'formats': ['markdown']}
+        )
+        
+        scraped_pages = []
+        source_urls = []
+        
+        # In firecrawl SDK v2, job.data contains a list of Document objects
+        if hasattr(job, 'data') and job.data:
+            for doc in job.data:
+                page_url = getattr(doc.metadata, 'source_url', url) if hasattr(doc, 'metadata') else url
+                title = getattr(doc.metadata, 'title', page_url) if hasattr(doc, 'metadata') else page_url
+                
+                # Extract markdown from Document object
+                content = getattr(doc, 'markdown', "")
+                if not content:
+                    content = str(doc)
+                    
+                # Clean up excessive newlines
+                content = re.sub(r'\n{3,}', '\n\n', content)
+                
+                # Truncate to avoid sending too much to the LLM
+                content = content[:MAX_CONTENT_LENGTH]
+                
+                scraped_pages.append({
+                    "url": page_url,
+                    "title": title,
+                    "snippet": f"Content from {title}",
+                    "content": content,
+                })
+                source_urls.append(page_url)
+                print(f"   Crawled: {title[:60]}...")
+        else:
+            print("   [Warning] No pages crawled or empty data returned.")
             
-        # Clean up excessive newlines
-        content = re.sub(r'\n{3,}', '\n\n', content)
-        
-        # Truncate to avoid sending too much to the LLM
-        return content[:MAX_CONTENT_LENGTH]
+        return scraped_pages, source_urls
         
     except Exception as e:
-        return f"[Failed to scrape {url}: {e}]"
-
-
-def search_and_scrape(hotel_name: str) -> tuple[list[dict], list[str]]:
-    """
-    Search DuckDuckGo for hotel information, then scrape top results.
-    Prioritizes credible travel/booking sources.
-    
-    Returns:
-        (scraped_pages, source_urls)
-    """
-    # Domains to skip (social media, forums, etc.)
-    skip_domains = {"reddit.com", "facebook.com", "twitter.com", "instagram.com", "tiktok.com"}
-    
-    # Targeted search queries for credible hotel sources
-    search_queries = [
-        f"{hotel_name} site:tripadvisor.com OR site:booking.com",
-        f"{hotel_name} hotel official site amenities rooms",
-        f"{hotel_name} hotel reviews rating location",
-    ]
-    
-    all_results = []
-    seen_urls = set()
-    
-    for query in search_queries:
-        try:
-            results = DDGS().text(query, max_results=4)
-            for r in results:
-                url = r.get("href", "")
-                # Skip unwanted domains
-                if any(domain in url for domain in skip_domains):
-                    continue
-                if url and url not in seen_urls:
-                    seen_urls.add(url)
-                    all_results.append(r)
-        except Exception as e:
-            print(f"   [Warning] Search failed for '{query}': {e}")
-    
-    # Scrape the top results (limit to 4 to get good coverage)
-    scraped_pages = []
-    source_urls = []
-    
-    for result in all_results[:4]:
-        url = result.get("href", "")
-        title = result.get("title", "")
-        snippet = result.get("body", "")
-        
-        print(f"   Scraping: {title[:60]}...")
-        content = scrape_url(url)
-        
-        # Skip if scraping failed
-        if content.startswith("[Failed"):
-            print(f"   [Skipped] Could not scrape: {url[:60]}")
-            print(f"   Reason: {content}")
-            continue
-        
-        scraped_pages.append({
-            "url": url,
-            "title": title,
-            "snippet": snippet,
-            "content": content,
-        })
-        source_urls.append(url)
-    
-    return scraped_pages, source_urls
+        print(f"   [Error] Failed to crawl {url}: {e}")
+        return [{"url": url, "title": "Error", "snippet": "", "content": f"[Failed to crawl: {e}]"}], []
 
 
 def web_researcher(state: AEOState) -> dict:
     """
     Web Researcher Agent node for LangGraph.
     
-    Determines whether input is a URL or hotel name, then:
-      - URL: scrapes it directly
-      - Name: searches the web and scrapes top results
+    Crawls the provided hotel_url using Firecrawl.
     """
-    hotel_input = state.get("hotel_name_or_url", "").strip()
+    hotel_url = state.get("hotel_url", "").strip()
     
-    print(f"\n>> [Web Researcher] Researching: {hotel_input}")
+    print(f"\n>> [Web Researcher] Researching: {hotel_url}")
     
-    if not hotel_input:
-        print("   [Error] No hotel name or URL provided")
+    if not hotel_url:
+        print("   [Error] No hotel URL provided")
         return {
-            "raw_hotel_data": {"error": "No input provided"},
+            "raw_hotel_data": {"error": "No URL provided"},
             "sources": [],
         }
     
-    if is_url(hotel_input):
-        # ── Direct URL scraping ──
-        print(f"   Mode: Direct URL scraping")
-        content = scrape_url(hotel_input)
-        
-        return {
-            "raw_hotel_data": {
-                "source_type": "direct_url",
-                "url": hotel_input,
-                "content": content,
-            },
-            "sources": [hotel_input],
-        }
-    else:
-        # ── Search by hotel name ──
-        print(f"   Mode: Web search + scraping")
-        scraped_pages, source_urls = search_and_scrape(hotel_input)
-        
-        if not scraped_pages:
-            print("   [Warning] No results found, using search snippets only")
-        
-        print(f"   Found {len(scraped_pages)} sources")
-        
-        return {
-            "raw_hotel_data": {
-                "source_type": "search",
-                "hotel_query": hotel_input,
-                "pages": scraped_pages,
-            },
-            "sources": source_urls,
-        }
+    # ── Crawl the hotel website ──
+    print(f"   Mode: Website Crawl")
+    scraped_pages, source_urls = crawl_hotel_site(hotel_url)
+    
+    if not scraped_pages:
+        print("   [Warning] No results found from crawl")
+    
+    print(f"   Found {len(scraped_pages)} source pages")
+    
+    return {
+        "raw_hotel_data": {
+            "source_type": "crawl",
+            "hotel_url": hotel_url,
+            "pages": scraped_pages,
+        },
+        "sources": source_urls,
+    }

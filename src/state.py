@@ -13,7 +13,7 @@ class AEOState(TypedDict, total=False):
     """
     
     # ── Input (provided by the user at the start) ──────────────────────
-    hotel_name_or_url: str        # Hotel name (e.g. "Hilton KL") or URL
+    hotel_url: str                # Official URL of the hotel
     traveller_query: str          # e.g. "budget family hotel in Kuala Lumpur"
     
     # ── Web Researcher output ──────────────────────────────────────────
