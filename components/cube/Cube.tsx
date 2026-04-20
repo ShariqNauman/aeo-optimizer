@@ -13,15 +13,37 @@ interface CubeProps {
   onFaceClick: (stage: Stage) => void;
 }
 
+const FACES: { stage: Stage; position: [number, number, number]; rotation: [number, number, number] }[] = [
+  { stage: "original", position: [0, 0, 1], rotation: [0, 0, 0] },         // Front
+  { stage: "evaluation", position: [1, 0, 0], rotation: [0, Math.PI / 2, 0] }, // Right
+  { stage: "gap", position: [0, 0, -1], rotation: [0, Math.PI, 0] },        // Back
+  { stage: "optimization", position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0] }, // Left
+  { stage: "validation", position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0] },  // Top
+  { stage: "result", position: [0, -1, 0], rotation: [Math.PI / 2, 0, 0] },     // Bottom
+];
+
 export const Cube = ({ stages, selectedStage, onFaceClick }: CubeProps) => {
   const meshRef = useRef<THREE.Group>(null);
   const boxRef = useRef<THREE.Mesh>(null);
   const isComplete = Object.keys(stages).length === 6;
 
+  const targetQuaternion = useMemo(() => new THREE.Quaternion(), []);
+
   useFrame((state, delta) => {
-    if (meshRef.current && !selectedStage) {
-      meshRef.current.rotation.y += delta * 0.1;
-      meshRef.current.rotation.x += delta * 0.05;
+    if (meshRef.current) {
+      if (!selectedStage) {
+        meshRef.current.rotation.y += delta * 0.1;
+        meshRef.current.rotation.x += delta * 0.05;
+      } else {
+        const selectedFace = FACES.find(f => f.stage === selectedStage);
+        if (selectedFace) {
+          const faceQuat = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(selectedFace.rotation[0], selectedFace.rotation[1], selectedFace.rotation[2], 'XYZ')
+          );
+          targetQuaternion.copy(faceQuat).invert();
+          meshRef.current.quaternion.slerp(targetQuaternion, 5 * delta);
+        }
+      }
     }
 
     if (boxRef.current && isComplete) {
@@ -30,15 +52,6 @@ export const Cube = ({ stages, selectedStage, onFaceClick }: CubeProps) => {
       material.emissiveIntensity = pulse;
     }
   });
-
-  const faces: { stage: Stage; position: [number, number, number]; rotation: [number, number, number] }[] = [
-    { stage: "original", position: [0, 0, 1], rotation: [0, 0, 0] },         // Front
-    { stage: "evaluation", position: [1, 0, 0], rotation: [0, Math.PI / 2, 0] }, // Right
-    { stage: "gap", position: [0, 0, -1], rotation: [0, Math.PI, 0] },        // Back
-    { stage: "optimization", position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0] }, // Left
-    { stage: "validation", position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0] },  // Top
-    { stage: "result", position: [0, -1, 0], rotation: [Math.PI / 2, 0, 0] },     // Bottom
-  ];
 
   return (
     <group ref={meshRef}>
@@ -56,7 +69,7 @@ export const Cube = ({ stages, selectedStage, onFaceClick }: CubeProps) => {
       </mesh>
 
       {/* Interactive Faces */}
-      {faces.map((f) => (
+      {FACES.map((f) => (
         <Face
           key={f.stage}
           position={f.position}

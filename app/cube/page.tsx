@@ -8,7 +8,7 @@ import { simulatePipeline } from "@/lib/simulation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader } from "@/components/ui/Loader";
 import { DetailPanel } from "@/components/panel/DetailPanel";
-import { ChevronLeft, Info, X } from "lucide-react";
+import { ChevronLeft, Info, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 export default function CubePage() {
@@ -32,6 +32,9 @@ export default function CubePage() {
   const handleFaceClick = (stage: Stage) => {
     setSelectedStage(stage);
   };
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const STAGE_ORDER: Stage[] = ["original", "evaluation", "gap", "optimization", "validation", "result"];
 
   return (
     <main className="min-h-screen bg-background overflow-hidden relative">
@@ -61,14 +64,55 @@ export default function CubePage() {
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="text-right pointer-events-auto"
+          className="text-right pointer-events-auto relative"
         >
-          <div className="glass-card px-4 py-2 flex items-center gap-3">
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="glass-card px-4 py-2 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer w-full"
+          >
             <BarIndicator progress={Object.keys(stages).length / 6} />
-            <span className="text-[10px] uppercase tracking-widest font-bold text-secondary">
-              Pipeline: {Object.keys(stages).length} / 6
-            </span>
-          </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-secondary">
+                Unknown Revealed: {Object.keys(stages).length} / 6
+              </span>
+              <ChevronDown className={`w-3 h-3 text-secondary transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {isDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute right-0 mt-2 w-full min-w-[200px] glass-panel flex flex-col p-2 z-50 rounded-xl"
+              >
+                {STAGE_ORDER.map((stage) => {
+                  const data = stages[stage];
+                  const isCompleted = !!data;
+                  return (
+                    <button
+                      key={stage}
+                      disabled={!isCompleted}
+                      onClick={() => {
+                        handleFaceClick(stage);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`text-left px-4 py-3 rounded-lg text-[10px] uppercase tracking-widest font-bold transition-all ${
+                        isCompleted 
+                          ? selectedStage === stage 
+                            ? "bg-accent/20 text-accent" 
+                            : "text-secondary hover:bg-white/5 hover:text-white"
+                          : "text-secondary/30 cursor-not-allowed"
+                      }`}
+                    >
+                      {data ? data.title : `${stage}...`}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 
