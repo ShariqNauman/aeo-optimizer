@@ -1,21 +1,13 @@
 """
 AEO Optimizer - CLI Entry Point
 =================================
-This is the main script you run from the terminal.
-
 Usage:
     python main.py
-
-What it does:
-    1. Builds the LangGraph pipeline (all agents wired together)
-    2. Creates an initial state with sample hotel data
-    3. Runs the full pipeline
-    4. Prints the final state (results from every agent)
-
-Right now (Phase 2), all agents are STUBS — they just print their name
-and return dummy data. Starting from Phase 3, we'll replace them one
-by one with real LLM-powered agents.
 """
+
+import json
+from dotenv import load_dotenv
+load_dotenv()
 
 from src.graph import build_graph
 
@@ -23,7 +15,7 @@ from src.graph import build_graph
 def main():
     print("=" * 60)
     print("  AEO Optimizer - Multi-Agent Pipeline")
-    print("  Phase 2: Graph Skeleton (Stub Nodes)")
+    print("  Phase 3: Web Researcher + Data Aggregation")
     print("=" * 60)
     
     # ── Step 1: Build the graph ──
@@ -32,8 +24,9 @@ def main():
     print("[Setup] Graph compiled successfully!\n")
     
     # ── Step 2: Define the initial state ──
+    # Try with a real hotel name — the Web Researcher will search for it
     initial_state = {
-        "hotel_name_or_url": "The Grand Palace Hotel Kuala Lumpur",
+        "hotel_name_or_url": "Hilton Kuala Lumpur",
         "traveller_query": "luxury family hotel in Kuala Lumpur with pool",
     }
     
@@ -49,11 +42,35 @@ def main():
     print("PIPELINE COMPLETE - Final State Summary")
     print("=" * 60)
     
-    print(f"\n  Hotel/URL:           {final_state.get('hotel_name_or_url')}")
+    # Input info
+    print(f"\n  Hotel/URL:          {final_state.get('hotel_name_or_url')}")
     print(f"  Query:              {final_state.get('traveller_query')}")
     print(f"  Sources Found:      {len(final_state.get('sources', []))}")
+    
+    # Show sources
+    for i, src in enumerate(final_state.get("sources", []), 1):
+        print(f"    [{i}] {src[:80]}")
+    
+    # Show aggregated profile
+    profile = final_state.get("aggregated_profile", {})
+    if profile and "error" not in profile:
+        print(f"\n  --- Aggregated Hotel Profile ---")
+        print(f"  Name:          {profile.get('name', 'N/A')}")
+        print(f"  Location:      {profile.get('location', 'N/A')}")
+        print(f"  Star Rating:   {profile.get('star_rating', 'N/A')}")
+        print(f"  Price Range:   {profile.get('price_range', 'N/A')}")
+        print(f"  Description:   {profile.get('description', 'N/A')[:100]}...")
+        print(f"  Amenities:     {', '.join(profile.get('amenities', []))}")
+        print(f"  Room Types:    {', '.join(profile.get('room_types', []))}")
+        print(f"  Dining:        {', '.join(profile.get('dining_options', []))}")
+        print(f"  USPs:          {', '.join(profile.get('unique_selling_points', []))}")
+        print(f"  Nearby:        {', '.join(profile.get('nearby_attractions', []))}")
+        print(f"  Reviews:       {profile.get('review_summary', 'N/A')[:100]}...")
+        print(f"  Structured:    {profile.get('structured_data_available', 'N/A')}")
+    
+    # Remaining stub outputs
+    print(f"\n  --- Remaining (Stubs) ---")
     print(f"  Evaluation Score:   {final_state.get('evaluation_score')}/100")
-    print(f"  Reasoning:          {final_state.get('evaluation_reasoning')}")
     print(f"  Gaps Found:         {len(final_state.get('gaps', []))}")
     print(f"  Validation Passed:  {final_state.get('validation_passed')}")
     print(f"  Human Approved:     {final_state.get('human_approved')}")
@@ -61,9 +78,6 @@ def main():
     print(f"  Score Delta:        +{final_state.get('score_delta')} points")
     
     print("\n" + "=" * 60)
-    print("  All stub nodes executed successfully!")
-    print("  Next: Phase 3 will replace Agent 1 with real LLM logic.")
-    print("=" * 60)
 
 
 if __name__ == "__main__":

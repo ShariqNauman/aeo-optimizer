@@ -1,12 +1,12 @@
 from langgraph.graph import StateGraph, START, END
 from src.state import AEOState
+from src.agents.web_researcher import web_researcher
+from src.agents.data_aggregation import data_aggregation
 
 
 # ── Stub Node Functions ───────────────────────────────────────────────
-# Each function receives the full state dict and returns a dict of
-# updates to merge back. Returning {} means "change nothing".
-#
-# In later phases, we'll replace these with real agent logic.
+# Remaining stubs will be replaced in later phases.
+# Web Researcher and Data Aggregation are now real agents (imported above).
 # ──────────────────────────────────────────────────────────────────────
 
 def input_handler(state: AEOState) -> dict:
@@ -18,30 +18,6 @@ def input_handler(state: AEOState) -> dict:
     print(f"   Hotel/URL: {state.get('hotel_name_or_url', 'N/A')}")
     print(f"   Query:     {state.get('traveller_query', 'N/A')}")
     return {}
-
-
-def web_researcher(state: AEOState) -> dict:
-    """
-    Web Researcher Agent
-    Scrapes/searches the internet for hotel data from credible sources.
-    If a URL is provided, scrapes that page directly.
-    If a hotel name is provided, searches the web for relevant information.
-    """
-    hotel_input = state.get("hotel_name_or_url", "")
-    print(f"\n>> [Web Researcher] Researching: {hotel_input}")
-    return {
-        "raw_hotel_data": {"stub": True, "source": "placeholder data"},
-        "sources": ["https://example.com/stub"],
-    }
-
-
-def data_aggregation(state: AEOState) -> dict:
-    """
-    Agent 1: Data Aggregation
-    Structures raw scraped data into a clean, structured hotel profile.
-    """
-    print("\n>> [Agent 1: Data Aggregation] Processing scraped data...")
-    return {"aggregated_profile": state.get("raw_hotel_data", {})}
 
 
 def ai_simulator(state: AEOState) -> dict:
