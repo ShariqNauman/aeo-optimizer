@@ -6,9 +6,7 @@ from src.agents.ai_simulator import ai_simulator
 from src.agents.gap_analyzer import gap_analyzer
 from src.agents.optimizer import optimizer
 from src.agents.validator import validator
-
-
-# ── Stub Node Functions ───────────────────────────────────────────────
+from src.agents.resimulator import resimulator
 # Remaining stubs will be replaced in later phases.
 # Real agents: Web Researcher, Data Aggregation, AI Simulator, Gap Analyzer, Optimizer, Validator.
 # ──────────────────────────────────────────────────────────────────────
@@ -27,31 +25,47 @@ def input_handler(state: AEOState) -> dict:
 # ai_simulator and gap_analyzer are imported from src.agents above.
 
 
-# optimizer and validator are imported from src.agents above.
-
+# optimizer, validator, and resimulator are imported from src.agents above.
 
 def human_approval(state: AEOState) -> dict:
     """
-    HITL: Human-in-the-Loop
-    Allows human to review and approve/reject optimization.
+    Human-in-the-Loop Node.
+    Pauses execution in the CLI and asks the user to approve the optimized content.
     """
-    print("\n>> [HITL] Awaiting human approval...")
-    return {"human_approved": True}
+    print("\n" + "="*60)
+    print(">> [HITL] FINAL HUMAN REVIEW")
+    print("="*60)
+    
+    score_delta = state.get("score_delta", 0)
+    print(f"The optimization improved the profile's AI readiness by +{score_delta} points.\n")
+    
+    optimized_profile = state.get("optimized_profile", {})
+    if optimized_profile:
+        print("--- OPTIMIZED PROFILE SUMMARY ---")
+        for key, value in optimized_profile.items():
+            if isinstance(value, list):
+                print(f"{key.replace('_', ' ').title()}:")
+                for item in value:
+                    print(f"  - {item}")
+            else:
+                print(f"{key.replace('_', ' ').title()}: {value}")
+        print("-" * 33 + "\n")
+        
+    print("Please review the optimized profile. Do you approve pushing these changes to the live site?")
+    
+    while True:
+        choice = input("Approve? (y/n): ").strip().lower()
+        if choice in ['y', 'yes']:
+            print(">> [HITL] Status: APPROVED. Changes are ready to be deployed.")
+            return {"human_approved": True}
+        elif choice in ['n', 'no']:
+            print(">> [HITL] Status: REJECTED. Changes discarded.")
+            return {"human_approved": False}
+        else:
+            print("Please type 'y' or 'n'.")
 
 
-def resimulator(state: AEOState) -> dict:
-    """
-    Agent 5: Re-simulation Agent
-    Re-runs the AI evaluation on the optimized profile.
-    """
-    print("\n>> [Agent 5: Re-simulator] Re-evaluating optimized profile...")
-    original_score = state.get("evaluation_score", 0)
-    new_score = min(original_score + 15, 100)
-    return {
-        "resim_score": new_score,
-        "resim_reasoning": "Stub: simulated improvement",
-        "score_delta": new_score - original_score,
-    }
+
 
 
 def should_reoptimize(state: AEOState) -> str:

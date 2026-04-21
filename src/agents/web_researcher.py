@@ -36,7 +36,7 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str]]:
         # Crawl the site up to 4 pages to get comprehensive info without exploding token count
         job = app.crawl(
             url, 
-            limit=4, 
+            limit=5, 
             scrape_options={'formats': ['markdown']}
         )
         

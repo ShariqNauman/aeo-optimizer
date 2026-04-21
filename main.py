@@ -15,7 +15,7 @@ from src.graph import build_graph
 def main():
     print("=" * 60)
     print("  AEO Optimizer - Multi-Agent Pipeline")
-    print("  Phase 4: AI Simulator + Gap Analyzer")
+    print("  Phase 6: Re-simulator & Human-in-the-Loop")
     print("=" * 60)
     
     # ── Step 1: Build the graph ──
@@ -101,8 +101,11 @@ def main():
         print(f"  Optimized Profile: Generated successfully")
         print(f"  New USPs:          {len(opt_profile.get('unique_selling_points', []))} listed")
         print(f"  New Amenities:     {len(opt_profile.get('amenities', []))} listed")
+    print(f"\n  --- Re-simulation (Agent 5) ---")
     print(f"  Re-sim Score:       {final_state.get('resim_score')}/100")
     print(f"  Score Delta:        +{final_state.get('score_delta')} points")
+    
+    print(f"\n  --- Final Approval ---")
     print(f"  Human Approved:     {final_state.get('human_approved')}")
     
     print("\n" + "=" * 60)
