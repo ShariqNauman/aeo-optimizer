@@ -89,9 +89,18 @@ def main():
         print(f"      Fix:   {fix}")
         print(f"      Points: +{pts}")
     
-    # Remaining stubs
-    print(f"\n  --- Remaining (Stubs) ---")
-    print(f"  Validation Passed:  {final_state.get('validation_passed')}")
+    # Show Validation & Optimization results
+    print(f"\n  --- Optimization & Validation (Agents 3 & 4) ---")
+    print(f"  Validation Passed: {final_state.get('validation_passed', 'N/A')}")
+    val_fb = final_state.get('validation_feedback', '')
+    if val_fb:
+        print(f"  Feedback:          {val_fb[:150]}...")
+    
+    opt_profile = final_state.get("optimized_profile", {})
+    if opt_profile:
+        print(f"  Optimized Profile: Generated successfully")
+        print(f"  New USPs:          {len(opt_profile.get('unique_selling_points', []))} listed")
+        print(f"  New Amenities:     {len(opt_profile.get('amenities', []))} listed")
     print(f"  Re-sim Score:       {final_state.get('resim_score')}/100")
     print(f"  Score Delta:        +{final_state.get('score_delta')} points")
     print(f"  Human Approved:     {final_state.get('human_approved')}")

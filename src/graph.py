@@ -4,11 +4,13 @@ from src.agents.web_researcher import web_researcher
 from src.agents.data_aggregation import data_aggregation
 from src.agents.ai_simulator import ai_simulator
 from src.agents.gap_analyzer import gap_analyzer
+from src.agents.optimizer import optimizer
+from src.agents.validator import validator
 
 
 # ── Stub Node Functions ───────────────────────────────────────────────
 # Remaining stubs will be replaced in later phases.
-# Real agents: Web Researcher, Data Aggregation, AI Simulator, Gap Analyzer.
+# Real agents: Web Researcher, Data Aggregation, AI Simulator, Gap Analyzer, Optimizer, Validator.
 # ──────────────────────────────────────────────────────────────────────
 
 def input_handler(state: AEOState) -> dict:
@@ -25,25 +27,7 @@ def input_handler(state: AEOState) -> dict:
 # ai_simulator and gap_analyzer are imported from src.agents above.
 
 
-def optimizer(state: AEOState) -> dict:
-    """
-    Agent 3: Optimization Agent
-    Rewrites hotel content to address identified gaps.
-    """
-    print("\n>> [Agent 3: Optimizer] Generating optimized content...")
-    return {"optimized_profile": state.get("aggregated_profile", {})}
-
-
-def validator(state: AEOState) -> dict:
-    """
-    Agent 4: Validator Agent
-    Checks quality and factual accuracy of optimized content.
-    """
-    print("\n>> [Agent 4: Validator] Validating optimized content...")
-    return {
-        "validation_passed": True,
-        "validation_feedback": "Stub: auto-passed validation",
-    }
+# optimizer and validator are imported from src.agents above.
 
 
 def human_approval(state: AEOState) -> dict:
@@ -68,6 +52,24 @@ def resimulator(state: AEOState) -> dict:
         "resim_reasoning": "Stub: simulated improvement",
         "score_delta": new_score - original_score,
     }
+
+
+def should_reoptimize(state: AEOState) -> str:
+    """
+    Conditional logic after validation.
+    If validation passed or max retries reached, move to resimulator.
+    Otherwise, route back to optimizer.
+    """
+    passed = state.get("validation_passed", True)
+    retry_count = state.get("retry_count", 0)
+    
+    if passed or retry_count >= 2:
+        if not passed:
+            print("   [Warning] Validation failed but max retries reached. Proceeding.")
+        return "resimulator"
+    else:
+        print("   [Routing] Validation failed. Sending back to Optimizer.")
+        return "optimizer"
 
 
 # ── Build the Graph ──────────────────────────────────────────────────
@@ -105,7 +107,17 @@ def build_graph():
     workflow.add_edge("ai_simulator", "gap_analyzer")
     workflow.add_edge("gap_analyzer", "optimizer")
     workflow.add_edge("optimizer", "validator")
-    workflow.add_edge("validator", "resimulator")
+    
+    # Conditional edge from validator
+    workflow.add_conditional_edges(
+        "validator",
+        should_reoptimize,
+        {
+            "resimulator": "resimulator",
+            "optimizer": "optimizer"
+        }
+    )
+    
     workflow.add_edge("resimulator", "human_approval")       
     workflow.add_edge("human_approval", END)
     

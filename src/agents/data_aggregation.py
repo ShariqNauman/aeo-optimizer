@@ -46,8 +46,8 @@ def _format_raw_data(raw_data: dict) -> str:
             f"Content:\n{raw_data.get('content', 'No content available')}"
         )
     
-    elif source_type == "search":
-        parts = [f"Hotel searched: {raw_data.get('hotel_query', 'N/A')}\n"]
+    elif source_type in ("search", "crawl"):
+        parts = [f"Hotel URL: {raw_data.get('hotel_url', 'N/A')}\n"]
         for i, page in enumerate(raw_data.get("pages", []), 1):
             parts.append(f"\n--- Source {i}: {page.get('title', 'N/A')} ---")
             parts.append(f"URL: {page.get('url', 'N/A')}")
@@ -67,7 +67,7 @@ def data_aggregation(state: AEOState) -> dict:
     to extract a structured HotelProfile.
     """
     raw_data = state.get("raw_hotel_data", {})
-    hotel_input = state.get("hotel_name_or_url", "Unknown Hotel")
+    hotel_input = state.get("hotel_url", "Unknown Hotel")
     
     print(f"\n>> [Agent 1: Data Aggregation] Structuring data for: {hotel_input}")
     
