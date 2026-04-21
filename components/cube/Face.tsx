@@ -1,6 +1,6 @@
 "use client";
 
-import { Text } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { StageData } from "@/types/stage";
 import { memo } from "react";
 
@@ -38,33 +38,21 @@ export const Face = memo(({ position, rotation, data, isActive, isCompleted, onC
       </mesh>
 
       {isCompleted && data && (
-        <group position={[0, 0, 0.01]}>
-          <Text
-            position={[0, 0.4, 0]}
-            fontSize={0.18}
-            color={isActive ? "white" : "#CA8A04"}
-            anchorX="center"
-            anchorY="middle"
-            letterSpacing={0.05}
-            maxWidth={1.6}
-            textAlign="center"
-          >
-            {data.title.toUpperCase()}
-          </Text>
-
-          <Text
-            position={[0, -0.2, 0]}
-            fontSize={0.12}
-            color="white"
-            maxWidth={1.7}
-            textAlign="center"
-            anchorX="center"
-            anchorY="middle"
-            lineHeight={1.4}
-          >
-            {data.preview}
-          </Text>
-        </group>
+        <Html
+          transform
+          distanceFactor={1.5}
+          position={[0, 0, 0.02]}
+          className="pointer-events-none select-none"
+        >
+          <div className="w-[450px] flex flex-col items-center justify-center text-center p-6">
+            <h3 className={`font-heading text-4xl font-bold tracking-wider mb-4 ${isActive ? 'text-white' : 'text-accent'}`}>
+              {data.title.toUpperCase()}
+            </h3>
+            <p className="font-body text-xl text-white/90 leading-relaxed line-clamp-4">
+              {data.preview}
+            </p>
+          </div>
+        </Html>
       )}
     </group>
   );
