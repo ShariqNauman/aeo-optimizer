@@ -1,7 +1,4 @@
-# Virtual environment
-venv/
-.venv/
-env/
+# Environment variables (API keys)
 .env
 
 # Python
@@ -9,6 +6,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env
 
 # IDE
 .vscode/
