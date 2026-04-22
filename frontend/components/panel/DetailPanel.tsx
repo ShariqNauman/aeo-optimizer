@@ -18,10 +18,90 @@ export const DetailPanel = ({ stage, data, onClose, onApprove }: DetailPanelProp
 
   const renderContent = () => {
     switch (stage) {
+      case "original":
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="space-y-4">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Extracted Description</h4>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-sm text-white/80 font-body leading-relaxed">
+                {data.details.content.description || "No description found."}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Extracted Amenities</h4>
+              <div className="flex flex-wrap gap-2">
+                {data.details.content.amenities && data.details.content.amenities.length > 0 ? (
+                  data.details.content.amenities.map((item: string, i: number) => (
+                    <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/70">
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-white/40 text-sm italic">No amenities found.</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
       case "evaluation":
         return <EvaluationPanel data={data} />;
+      case "gap":
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="space-y-4">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Identified Gaps</h4>
+              <ul className="space-y-4">
+                {data.details.content.gaps && data.details.content.gaps.length > 0 ? (
+                  data.details.content.gaps.map((gap: any, i: number) => {
+                    const severityColor = 
+                      gap.severity?.toLowerCase() === "high" ? "text-red-500 border-red-500/20 bg-red-500/10" :
+                      gap.severity?.toLowerCase() === "medium" ? "text-orange-500 border-orange-500/20 bg-orange-500/10" :
+                      "text-yellow-500 border-yellow-500/20 bg-yellow-500/10";
+                      
+                    return (
+                      <li key={i} className="flex flex-col gap-2 p-4 bg-white/5 border border-white/10 rounded-xl font-body">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider rounded border ${severityColor}`}>
+                            {gap.severity || "Unknown"}
+                          </span>
+                          <span className="text-xs text-white/50 uppercase tracking-wider">{gap.category}</span>
+                        </div>
+                        <p className="text-sm text-white/90">{gap.description}</p>
+                        <div className="mt-2 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+                          <p className="text-xs text-accent/90"><span className="font-bold">Suggestion:</span> {gap.suggested_improvement}</p>
+                        </div>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <span className="text-white/40 text-sm italic">No gaps identified.</span>
+                )}
+              </ul>
+            </div>
+          </div>
+        );
       case "optimization":
         return <OptimizationPanel data={data} onApprove={onApprove} />;
+      case "validation":
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center border-4 border-white/10">
+                <span className="text-2xl font-heading text-white">{Math.round(data.details.content.confidence * 100)}%</span>
+              </div>
+              <div>
+                <h4 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold">Confidence Score</h4>
+                <p className="text-white font-heading text-xl">{data.details.content.confidence > 0.8 ? "High" : "Low"}</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Validation Status</h4>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-sm text-white/80 font-body leading-relaxed">
+                {data.details.content.status || "Validating..."}
+              </div>
+            </div>
+          </div>
+        );
       case "result":
         return <ResultPanel data={data} />;
       default:

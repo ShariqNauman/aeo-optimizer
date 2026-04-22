@@ -175,15 +175,7 @@ export default function CubePage() {
         )}
       </AnimatePresence>
 
-      {/* Loading Overlay */}
-      {Object.keys(stages).length === 0 && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-          <Loader />
-          <p className="mt-4 text-[10px] uppercase tracking-[0.2em] font-bold text-secondary animate-pulse">
-            Initializing Multi-Agent Pipeline...
-          </p>
-        </div>
-      )}
+      {/* Removed Loading Overlay to show empty cube immediately */}
     </main>
   );
 }

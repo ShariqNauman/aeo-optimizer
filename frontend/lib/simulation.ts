@@ -66,10 +66,7 @@ export const simulatePipeline = (
             query,
             hotel,
             content: {
-              gaps:
-                data.gaps?.map(
-                  (g: any) => `${(g.severity || "").toUpperCase()}: ${g.issue}`
-                ) || [],
+              gaps: data.gaps || [],
             },
           },
         };
@@ -83,6 +80,7 @@ export const simulatePipeline = (
             hotel,
             isApproved: false,
             content: {
+              optimizedProfile: data.optimized_profile || {},
               improvedDescription: data.optimized_profile?.description || "",
               improvements: data.optimized_profile?.unique_selling_points || [],
             },
