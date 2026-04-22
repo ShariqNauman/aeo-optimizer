@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { CubeScene } from "@/components/cube/CubeScene";
 import { Stage, StageData } from "@/types/stage";
 import { simulatePipeline } from "@/lib/simulation";
@@ -10,20 +10,50 @@ import { Loader } from "@/components/ui/Loader";
 import { DetailPanel } from "@/components/panel/DetailPanel";
 import { ChevronLeft, Info, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useSessionStore } from "@/lib/store";
 
 export default function CubePage() {
   const searchParams = useSearchParams();
-  const query = searchParams.get("query") || "";
-  const hotel = searchParams.get("hotel") || "";
+  const router = useRouter();
+  
+  // Zustand Store
+  const { 
+    query: storedQuery, 
+    hotelUrl: storedHotel, 
+    stages, 
+    _hasHydrated,
+    setSession, 
+    addStage 
+  } = useSessionStore();
 
-  const [stages, setStages] = useState<Partial<Record<Stage, StageData>>>({});
+  // Local state for non-persisted UI markers
+  const query = searchParams.get("query") || storedQuery || "";
+  const hotel = searchParams.get("hotel") || storedHotel || "";
+
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
-  const [isSimulating, setIsSimulating] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  // Sync URL params to store if present, but wait for hydration
+  useEffect(() => {
+    if (!_hasHydrated) return;
+
+    const urlQuery = searchParams.get("query");
+    const urlHotel = searchParams.get("hotel");
+    
+    if (urlQuery && urlHotel && (urlQuery !== storedQuery || urlHotel !== storedHotel)) {
+      setSession(urlQuery, urlHotel);
+    }
+  }, [searchParams, storedQuery, storedHotel, setSession, _hasHydrated]);
 
   useEffect(() => {
-    if (query && hotel) {
+    if (!_hasHydrated) return;
+
+    // Only simulate if we have a query/hotel AND no stages yet
+    if (query && hotel && Object.keys(stages).length === 0) {
+      setIsSimulating(true);
       const ws = simulatePipeline(query, hotel, (stageData) => {
-        setStages((prev) => ({ ...prev, [stageData.stage]: stageData }));
+        // Update global store directly
+        addStage(stageData);
         if (stageData.stage === "result") setIsSimulating(false);
       });
 
@@ -33,7 +63,7 @@ export default function CubePage() {
         }
       };
     }
-  }, [query, hotel]);
+  }, [query, hotel, stages, addStage, _hasHydrated]);
 
   const handleFaceClick = (stage: Stage) => {
     setSelectedStage(stage);
@@ -158,16 +188,16 @@ export default function CubePage() {
               onClose={() => setSelectedStage(null)}
               onApprove={() => {
                 if (selectedStage === "optimization") {
-                  setStages(prev => ({
-                    ...prev,
-                    optimization: {
-                      ...prev.optimization!,
+                  const currentOptimization = stages.optimization;
+                  if (currentOptimization) {
+                    addStage({
+                      ...currentOptimization,
                       details: {
-                        ...prev.optimization!.details,
+                        ...currentOptimization.details,
                         isApproved: true
                       }
-                    }
-                  }));
+                    });
+                  }
                 }
               }}
             />

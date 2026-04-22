@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Karla, Playfair_Display_SC } from "next/font/google";
 import "./globals.css";
+import { NavigationToggle } from "@/components/ui/NavigationToggle";
 
 const karla = Karla({ 
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
       <body className={`${karla.variable} ${playfair.variable} font-body bg-background text-text antialiased`}>
         {children}
+        <NavigationToggle />
       </body>
     </html>
   );

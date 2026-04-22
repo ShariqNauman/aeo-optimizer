@@ -1,10 +1,21 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { QueryForm } from "@/components/ui/QueryForm";
+import { DiscoveryChat, ViewState } from "@/components/ui/DiscoveryChat";
 import { ShieldCheck, Zap, BarChart3 } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const [viewState, setViewState] = useState<ViewState>("INITIAL");
+
+  const handleDiscoverWhy = (query: string, hotelUrl: string) => {
+    // Navigate to cube page with mock session data
+    const params = new URLSearchParams({ query, hotel: hotelUrl });
+    router.push(`/cube?${params.toString()}`);
+  };
+
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#FAFAF9]">
       {/* Background Liquid Glass Elements */}
@@ -35,7 +46,11 @@ export default function Home() {
           </p>
         </motion.div>
 
-        <QueryForm />
+        <DiscoveryChat 
+          viewState={viewState} 
+          setViewState={setViewState} 
+          onDiscoverWhy={handleDiscoverWhy} 
+        />
 
         <motion.div
           initial={{ opacity: 0 }}

@@ -5,7 +5,15 @@ export const simulatePipeline = (
   query: string,
   hotel: string,
   onStageComplete: (stage: StageData) => void
-): WebSocket => {
+): WebSocket | null => {
+  // Check if we should use mock data (e.g. via env var or if you want to bypass backend)
+  const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
+  if (useMock) {
+    simulateMockPipeline(query, hotel, onStageComplete);
+    return null;
+  }
+
   const ws = new WebSocket("ws://127.0.0.1:8000/ws/optimize");
 
   ws.onopen = () => {
@@ -130,7 +138,29 @@ export const simulatePipeline = (
       return;
     }
     console.error("WebSocket Error: ", error);
+    
+    // Auto-fallback to mock if connection fails and not explicitly disabled
+    if (process.env.NEXT_PUBLIC_AUTO_MOCK !== "false") {
+      console.warn("Falling back to mock simulation...");
+      simulateMockPipeline(query, hotel, onStageComplete);
+    }
   };
 
   return ws;
 };
+
+export const simulateMockPipeline = (
+  query: string,
+  hotel: string,
+  onStageComplete: (stage: StageData) => void
+) => {
+  const mockData = getMockStageData(query, hotel);
+  const stages: Stage[] = ["original", "evaluation", "gap", "optimization", "validation", "result"];
+
+  stages.forEach((stage, index) => {
+    setTimeout(() => {
+      onStageComplete(mockData[stage]);
+    }, (index + 1) * 1500); // 1.5s delay between stages
+  });
+};
+

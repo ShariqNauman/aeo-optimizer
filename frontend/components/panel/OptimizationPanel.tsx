@@ -103,21 +103,10 @@ export const OptimizationPanel = ({ data, onApprove }: OptimizationPanelProps) =
       </div>
 
       <div className="pt-6">
-        <Button
-          onClick={onApprove}
-          disabled={isApproved}
-          className={`w-full py-6 text-lg transition-all duration-500 ${
-            isApproved ? "bg-green-600 border-green-600 hover:opacity-100" : ""
-          }`}
-        >
-          {isApproved ? (
-            <span className="flex items-center gap-2">
-              Approved <Check className="w-5 h-5" />
-            </span>
-          ) : (
-            "Approve Optimized Content"
-          )}
-        </Button>
+        <div className="w-full py-4 px-6 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center gap-3 text-green-500 font-bold">
+          <Check className="w-5 h-5" />
+          <span>Automatically Approved for Validation</span>
+        </div>
       </div>
     </div>
   );

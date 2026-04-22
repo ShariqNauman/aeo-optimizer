@@ -3,12 +3,16 @@
 import { StageData } from "@/types/stage";
 import { RadarChart } from "../charts/RadarChart";
 import { Button } from "../ui/Button";
-import { Rocket, TrendingUp } from "lucide-react";
+import { Database, TrendingUp, Save, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { useSessionStore } from "@/lib/store";
+
 
 export const ResultPanel = ({ data }: { data: StageData }) => {
-  const { content } = data.details;
-  const [isDeployed, setIsDeployed] = useState(false);
+  const { content, query, hotel } = data.details;
+  const { addRecord } = useSessionStore();
+  const [isSaved, setIsSaved] = useState(false);
 
   const radarData = [
     { criterion: "Price", score: 18, fullMark: 20 },
@@ -18,9 +22,30 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
     { criterion: "Audience", score: 8, fullMark: 20 },
   ];
 
+  const handleSaveToDatabase = () => {
+    if (isSaved) return;
+
+    // 1. Add record to the global store
+    addRecord({
+      date: new Date().toISOString().split('T')[0],
+      query: query || "Custom Discovery Session",
+      url: hotel || "https://example.com",
+      baseline: 41, // Mock baseline
+      optimized: 67, // Mock result
+      delta: "+26",
+      reasoning: "Automated optimization of machine-readable pricing and location markers."
+    });
+
+    // 2. Update UI state
+    setIsSaved(true);
+    
+    // Mock save logic console log
+    console.log("💾 [HITL] Session Saved to Historical Archive");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div className="space-y-1">
           <h4 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold">Optimization Success</h4>
           <div className="flex items-baseline gap-3">
@@ -35,8 +60,10 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
         </div>
         
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest font-bold text-accent mb-1">Status</div>
-          <div className="text-white font-heading text-lg italic">Ready for Agent Selection</div>
+          <div className="space-y-1">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-accent">Status</div>
+            <div className="text-white font-heading text-lg italic leading-none">Ready for Agents</div>
+          </div>
         </div>
       </div>
 
@@ -45,7 +72,7 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       </div>
 
       <div className="p-6 bg-accent/10 border border-accent/20 rounded-2xl">
-        <p className="text-sm text-white/80 font-body leading-relaxed text-center">
+        <p className="text-sm text-white/80 font-body leading-relaxed text-center italic">
           "Your hotel is now signaling clear machine-readable data for pricing and location relevance, 
           significantly increasing citation likelihood in generative search."
         </p>
@@ -53,29 +80,29 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
 
       <div className="pt-6">
         <Button
-          onClick={() => setIsDeployed(true)}
+          onClick={handleSaveToDatabase}
           className={`w-full py-6 text-lg group ${
-            isDeployed ? "bg-accent/20 border-accent/40 text-accent cursor-default" : ""
+            isSaved ? "bg-green-600/20 border-green-600/40 text-green-500 cursor-default shadow-none" : "shadow-xl shadow-accent/10"
           }`}
         >
-          {isDeployed ? (
+          {isSaved ? (
             <span className="flex items-center gap-2">
-              Content Deployed & Active 🚀
+              Saved to Intelligence Archive <CheckCircle2 className="w-5 h-5" />
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              Ready for Deployment
-              <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              Save to Database
+              <Database className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </span>
           )}
         </Button>
-        {isDeployed && (
+        {isSaved && (
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 text-center text-xs text-accent font-bold uppercase tracking-[0.2em]"
+            className="mt-4 text-center text-xs text-green-500 font-bold uppercase tracking-[0.2em]"
           >
-            AEO signals are now live across all AI agent networks
+            Session successfully stored in the historical ledger
           </motion.p>
         )}
       </div>
