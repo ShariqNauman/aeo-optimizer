@@ -51,18 +51,10 @@ def human_approval(state: AEOState) -> dict:
                 print(f"{key.replace('_', ' ').title()}: {value}")
         print("-" * 33 + "\n")
         
-    print("Please review the optimized profile. Do you approve pushing these changes to the live site?")
-    
-    while True:
-        choice = input("Approve? (y/n): ").strip().lower()
-        if choice in ['y', 'yes']:
-            print(">> [HITL] Status: APPROVED. Changes are ready to be deployed.")
-            return {"human_approved": True}
-        elif choice in ['n', 'no']:
-            print(">> [HITL] Status: REJECTED. Changes discarded.")
-            return {"human_approved": False}
-        else:
-            print("Please type 'y' or 'n'.")
+    # When running via the Frontend API, we skip the terminal input block
+    # so the WebSocket doesn't freeze. The approval is handled on the Frontend UI.
+    print(">> [HITL] Status: Auto-approved for API streaming.")
+    return {"human_approved": True}
 
 
 

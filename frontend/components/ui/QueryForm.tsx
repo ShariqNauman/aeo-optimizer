@@ -45,12 +45,12 @@ export const QueryForm = () => {
       <div className="space-y-2">
         <label className="text-sm font-semibold text-secondary uppercase tracking-wider flex items-center gap-2">
           <Hotel className="w-4 h-4" />
-          Hotel Name or URL
+          Hotel URL
         </label>
         <input
           required
           type="text"
-          placeholder="e.g. Mandarin Oriental Kuala Lumpur"
+          placeholder="e.g. https://www.hilton.com/en/hotels/kulhihi-hilton-kuala-lumpur/"
           value={hotel}
           onChange={(e) => setHotel(e.target.value)}
           className="w-full p-4 bg-white/50 border border-secondary/20 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all font-body"

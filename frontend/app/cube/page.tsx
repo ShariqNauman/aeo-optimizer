@@ -22,10 +22,16 @@ export default function CubePage() {
 
   useEffect(() => {
     if (query && hotel) {
-      simulatePipeline(query, hotel, (stageData) => {
+      const ws = simulatePipeline(query, hotel, (stageData) => {
         setStages((prev) => ({ ...prev, [stageData.stage]: stageData }));
         if (stageData.stage === "result") setIsSimulating(false);
       });
+
+      return () => {
+        if (ws && typeof ws.close === "function") {
+          ws.close();
+        }
+      };
     }
   }, [query, hotel]);
 
