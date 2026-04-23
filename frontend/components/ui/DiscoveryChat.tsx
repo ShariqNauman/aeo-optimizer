@@ -50,13 +50,22 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
       interval = setInterval(() => {
         setStatusIndex((prev) => {
           if (prev < statusMessages.length - 1) return prev + 1;
-          setViewState("RESULTS");
           return prev;
         });
       }, 1500);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [viewState, setViewState]);
+  }, [viewState, statusMessages.length]);
+
+  // Handle transition to RESULTS separately to avoid updating parent state during render/state-update cycles
+  useEffect(() => {
+    if (viewState === "SEARCHING" && statusIndex === statusMessages.length - 1) {
+      const timeout = setTimeout(() => {
+        setViewState("RESULTS");
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [viewState, statusIndex, setViewState, statusMessages.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
