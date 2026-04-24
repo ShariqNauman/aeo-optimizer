@@ -15,7 +15,7 @@ const playfair = Playfair_Display_SC({
 });
 
 export const metadata: Metadata = {
-  title: "AEO Optimizer | AI Decision Visualizer",
+  title: "WeBoosta | AI Decision Visualizer",
   description: "Optimize your hospitality presence for AI agents.",
 };
 

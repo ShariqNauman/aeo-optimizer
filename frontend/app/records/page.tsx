@@ -47,7 +47,7 @@ export default function RecordsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `aeo_records_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `weboosta_records_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

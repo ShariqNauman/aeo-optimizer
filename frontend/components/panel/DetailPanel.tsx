@@ -4,7 +4,7 @@ import { Stage, StageData } from "@/types/stage";
 import { EvaluationPanel } from "./EvaluationPanel";
 import { OptimizationPanel } from "./OptimizationPanel";
 import { ResultPanel } from "./ResultPanel";
-import { X, Info } from "lucide-react";
+import { X, Info, CheckCircle2 } from "lucide-react";
 
 interface DetailPanelProps {
   stage: Stage | null;
@@ -20,26 +20,47 @@ export const DetailPanel = ({ stage, data, onClose, onApprove }: DetailPanelProp
     switch (stage) {
       case "original":
         return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+          <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
             <div className="space-y-4">
               <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Extracted Description</h4>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-sm text-white/80 font-body leading-relaxed">
                 {data.details.content.description || "No description found."}
               </div>
             </div>
-            <div className="space-y-4">
-              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Extracted Amenities</h4>
-              <div className="flex flex-wrap gap-2">
-                {data.details.content.amenities && data.details.content.amenities.length > 0 ? (
-                  data.details.content.amenities.map((item: string, i: number) => (
-                    <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/70">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Amenities</h4>
+                <div className="flex flex-wrap gap-2">
+                  {data.details.content.amenities?.map((item: string, i: number) => (
+                    <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-white/70">
                       {item}
                     </span>
-                  ))
-                ) : (
-                  <span className="text-white/40 text-sm italic">No amenities found.</span>
-                )}
+                  ))}
+                </div>
               </div>
+
+              <div className="space-y-4">
+                <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Room Types</h4>
+                <ul className="space-y-2">
+                  {data.details.content.room_types?.map((item: string, i: number) => (
+                    <li key={i} className="text-xs text-white/60 flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-white/20" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Unique Selling Points</h4>
+              <ul className="space-y-2">
+                {data.details.content.unique_selling_points?.map((item: string, i: number) => (
+                  <li key={i} className="text-xs text-white/80 flex items-start gap-3 p-3 bg-white/5 border border-white/5 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-accent shrink-0" /> {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         );
@@ -67,8 +88,11 @@ export const DetailPanel = ({ stage, data, onClose, onApprove }: DetailPanelProp
                           <span className="text-xs text-white/50 uppercase tracking-wider">{gap.category}</span>
                         </div>
                         <p className="text-sm text-white/90">{gap.description}</p>
-                        <div className="mt-2 p-3 bg-accent/10 border border-accent/20 rounded-lg">
+                        <div className="flex items-center justify-between mt-2 p-3 bg-accent/10 border border-accent/20 rounded-lg">
                           <p className="text-xs text-accent/90"><span className="font-bold">Suggestion:</span> {gap.suggested_improvement}</p>
+                          <div className="text-[10px] font-bold text-accent bg-accent/20 px-2 py-1 rounded">
+                            +{gap.estimated_point_gain} PTS
+                          </div>
                         </div>
                       </li>
                     );

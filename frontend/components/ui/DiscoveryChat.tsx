@@ -150,7 +150,7 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
                       <p className="text-accent/30 text-[9px] uppercase tracking-[0.4em] font-black font-mono">
-                        AEO_DISCOVERY_v2.0
+                        WEBOOSTA_v2.0
                       </p>
                     </div>
                     <div className="w-1 h-1 rounded-full bg-white/5" />

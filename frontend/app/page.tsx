@@ -33,15 +33,15 @@ export default function Home() {
           className="space-y-4 mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent font-semibold text-sm uppercase tracking-widest mb-4">
-            <Zap className="w-4 h-4 fill-accent" />
-            AI Engine Optimization
+            <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center text-white text-[10px] font-bold">W</div>
+            WeBoosta AI Engine
           </div>
           <h1 className="font-heading text-5xl md:text-7xl font-bold text-primary max-w-4xl leading-tight">
             Visible to Agents, <br />
             <span className="text-accent italic">Not Just Humans.</span>
           </h1>
           <p className="font-body text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
-            AEO Optimizer simulates AI decision-making to reveal how travel agents see your hotel, 
+            <span className="font-bold text-primary">WeBoosta</span> simulates AI decision-making to reveal how travel agents see your hotel, 
             providing actionable signals to win more bookings.
           </p>
         </motion.div>
@@ -89,7 +89,7 @@ export default function Home() {
       </div>
 
       <footer className="mt-24 pb-12 text-sm text-secondary/50 font-body uppercase tracking-tighter">
-        © 2026 AEO Optimizer | UMHackathon Excellence
+        © 2026 WeBoosta | UMHackathon Excellence
       </footer>
     </main>
   );
