@@ -8,8 +8,9 @@ Uses Pydantic + with_structured_output() to guarantee the LLM returns
 data in the exact schema we need.
 """
 
-from pydantic import BaseModel, Field
-from src.llm import get_llm
+from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from src.llm import get_structured_llm
 from src.state import AEOState
 
 
@@ -21,19 +22,37 @@ class HotelProfile(BaseModel):
     """Structured hotel profile extracted from raw web data."""
     name: str = Field(description="Official name of the hotel")
     location: str = Field(description="Full address or city/country")
-    star_rating: float = Field(description="Star rating (1-5), use 0 if unknown")
-    description: str = Field(description="Brief 2-3 sentence description of the hotel")
-    amenities: list[str] = Field(description="List of amenities (pool, spa, gym, etc.)")
-    room_types: list[str] = Field(description="Types of rooms available")
-    dining_options: list[str] = Field(description="Restaurants, bars, dining facilities")
-    price_range: str = Field(description="Approximate price range per night (e.g. '$150-$300')")
-    review_summary: str = Field(description="Summary of guest reviews and sentiment")
-    unique_selling_points: list[str] = Field(description="What makes this hotel stand out")
-    nearby_attractions: list[str] = Field(description="Notable nearby places and attractions")
-    contact_info: str = Field(description="Phone, email, or website if available")
-    structured_data_available: bool = Field(
-        description="Whether the hotel appears to have schema.org or structured data markup"
-    )
+    star_rating: float = Field(default=0.0, description="Star rating (1-5), use 0 if unknown")
+    description: str = Field(default="", description="Brief 2-3 sentence description of the hotel")
+    amenities: list[str] = Field(default_factory=list, description="List of amenities (pool, spa, gym, etc.)")
+    room_types: list[str] = Field(default_factory=list, description="Types of rooms available")
+    dining_options: list[str] = Field(default_factory=list, description="Restaurants, bars, dining facilities")
+    price_range: Optional[str] = Field(default="Unknown", description="Approximate price range per night (e.g. '$150-$300')")
+    review_summary: Optional[str] = Field(default="No reviews available.", description="Summary of guest reviews and sentiment")
+    unique_selling_points: list[str] = Field(default_factory=list, description="What makes this hotel stand out")
+    nearby_attractions: list[str] = Field(default_factory=list, description="Notable nearby places and attractions")
+    contact_info: Optional[str] = Field(default="", description="Phone, email, or website if available")
+    structured_data_available: bool = Field(default=False, description="Whether the hotel has schema.org markup")
+
+    @field_validator("contact_info", mode="before")
+    @classmethod
+    def coerce_contact_info(cls, v):
+        """Z.AI may return contact_info as a dict — flatten it to a string."""
+        if isinstance(v, dict):
+            parts = [f"{k}: {val}" for k, val in v.items() if val]
+            return " | ".join(parts)
+        return v or ""
+
+    @field_validator("price_range", "review_summary", mode="before")
+    @classmethod
+    def coerce_none_to_str(cls, v):
+        """Replace null fields with a sensible default string."""
+        return v if isinstance(v, str) else (str(v) if v is not None else "")
+
+
+# Maximum characters of raw web content sent to the LLM.
+# Z.AI's ilmu-glm-5.1 has a limited context window — keep prompts short.
+_MAX_RAW_CHARS = 6000
 
 
 def _format_raw_data(raw_data: dict) -> str:
@@ -41,22 +60,24 @@ def _format_raw_data(raw_data: dict) -> str:
     source_type = raw_data.get("source_type", "unknown")
     
     if source_type == "direct_url":
+        content = raw_data.get('content', 'No content available')[:_MAX_RAW_CHARS]
         return (
             f"Source: Direct URL ({raw_data.get('url', 'N/A')})\n\n"
-            f"Content:\n{raw_data.get('content', 'No content available')}"
+            f"Content:\n{content}"
         )
     
     elif source_type in ("search", "crawl"):
         parts = [f"Hotel URL: {raw_data.get('hotel_url', 'N/A')}\n"]
+        per_page = max(1000, _MAX_RAW_CHARS // max(1, len(raw_data.get("pages", []))))
         for i, page in enumerate(raw_data.get("pages", []), 1):
             parts.append(f"\n--- Source {i}: {page.get('title', 'N/A')} ---")
             parts.append(f"URL: {page.get('url', 'N/A')}")
             parts.append(f"Snippet: {page.get('snippet', 'N/A')}")
-            parts.append(f"Content:\n{page.get('content', 'No content')[:3000]}")
+            parts.append(f"Content:\n{page.get('content', 'No content')[:per_page]}")
         return "\n".join(parts)
     
     else:
-        return str(raw_data)
+        return str(raw_data)[:_MAX_RAW_CHARS]
 
 
 def data_aggregation(state: AEOState) -> dict:
@@ -75,22 +96,24 @@ def data_aggregation(state: AEOState) -> dict:
     raw_text = _format_raw_data(raw_data)
     
     # Build the prompt
-    prompt = f"""You are a hotel data analyst. Extract a comprehensive, structured hotel profile 
-from the following raw web data. Fill in as much detail as possible from the provided content.
-If certain information is not available, make reasonable inferences based on what IS available,
-but mark uncertain fields clearly.
+    prompt = f"""You are a hotel data analyst. Extract a structured hotel profile from the web data below.
+Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
-Hotel being analyzed: {hotel_input}
+Hotel: {hotel_input}
 
-Raw Data:
+Raw Data (truncated):
 {raw_text}
 
-Extract all relevant hotel information into the structured format.
-Be thorough — include every amenity, room type, and dining option you can find."""
+JSON fields required: name, location, star_rating, description, amenities (list),
+room_types (list), dining_options (list), price_range, review_summary,
+unique_selling_points (list), nearby_attractions (list), contact_info,
+structured_data_available (bool).
+
+Be thorough — extract every amenity, room type, and dining option you can find.
+Respond with ONLY the JSON object."""
     
-    # Use Gemini with structured output
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(HotelProfile)
+    # Use Z.AI with JSON-schema structured output
+    structured_llm = get_structured_llm(HotelProfile)
     
     try:
         profile = structured_llm.invoke(prompt)

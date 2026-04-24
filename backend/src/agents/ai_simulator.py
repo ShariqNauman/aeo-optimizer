@@ -12,7 +12,7 @@ Takes the aggregated hotel profile + traveller query and produces:
 """
 
 from pydantic import BaseModel, Field
-from src.llm import get_llm
+from src.llm import get_llm, get_structured_llm
 from src.state import AEOState
 
 
@@ -73,8 +73,8 @@ def ai_simulator(state: AEOState) -> dict:
     print(f"   Query: {query}")
 
     # Build the prompt
-    prompt = f"""You are an AI travel recommendation engine. A traveller has submitted the 
-following query, and you need to evaluate whether a hotel is a strong match.
+    prompt = f"""You are an AI travel recommendation engine evaluating a hotel against a traveller query.
+Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
 TRAVELLER QUERY: "{query}"
 
@@ -82,29 +82,34 @@ HOTEL PROFILE:
 {_format_profile(profile)}
 
 EVALUATION CRITERIA (each scored 0-20, totalling 0-100):
-1. **Relevance** (0-20): How well does this hotel match what the traveller is looking for?
-   Consider: location match, amenity match, price-point alignment, target demographic fit.
+1. Relevance (0-20): How well does the hotel match the traveller's query?
+2. Completeness (0-20): How detailed and comprehensive is the hotel's data?
+3. Trust Signals (0-20): Reviews, ratings, brand recognition, certifications.
+4. Value Proposition (0-20): Unique selling points, amenities, differentiation.
+5. Structured Data Quality (0-20): Is the data well-organized for machine consumption?
 
-2. **Completeness** (0-20): How detailed and comprehensive is the hotel's data profile?
-   Consider: are there descriptions, room types, dining options, pricing, contact info?
-   Penalise missing fields or vague data.
-
-3. **Trust Signals** (0-20): Does the hotel have credible trust indicators?
-   Consider: guest reviews, star rating, brand recognition, certifications, awards.
-
-4. **Value Proposition** (0-20): How compelling is the hotel's overall offering?
-   Consider: unique selling points, competitive amenities, clear differentiation.
-
-5. **Structured Data Quality** (0-20): Is the data well-organized for machine consumption?
-   Consider: would an AI system easily parse this data? Are there schema.org markers,
-   consistent formatting, clear categorization?
-
-Be critical and realistic. A score of 60-70 is average. 80+ is excellent.
+Be critical and realistic. 60-70 is average. 80+ is excellent.
 The overall_score MUST equal the sum of the 5 sub-scores.
-Provide specific, actionable reasoning — not generic praise."""
 
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(SimulationResult)
+Required JSON fields:
+{{
+  "overall_score": <int 0-100>,
+  "sub_scores": {{
+    "relevance": <int 0-20>,
+    "completeness": <int 0-20>,
+    "trust_signals": <int 0-20>,
+    "value_proposition": <int 0-20>,
+    "structured_data_quality": <int 0-20>
+  }},
+  "reasoning": "<3-5 sentence explanation>",
+  "would_recommend": <true|false>,
+  "key_strengths": ["<strength1>", "<strength2>", "<strength3>"],
+  "key_weaknesses": ["<weakness1>", "<weakness2>", "<weakness3>"]
+}}
+
+Respond with ONLY the JSON object."""
+
+    structured_llm = get_structured_llm(SimulationResult)
 
     try:
         result = structured_llm.invoke(prompt)

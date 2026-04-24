@@ -8,7 +8,7 @@ were addressed and no wildly inaccurate facts were hallucinated.
 """
 
 from pydantic import BaseModel, Field
-from src.llm import get_llm
+from src.llm import get_structured_llm
 from src.state import AEOState
 
 
@@ -45,7 +45,7 @@ def validator(state: AEOState) -> dict:
         return {"validation_passed": True, "validation_feedback": "Auto-pass (no gaps/optimization)"}
         
     prompt = f"""You are a QA Validator for hotel content optimization.
-Compare the original hotel profile and the identified gaps against the NEW optimized profile.
+Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
 ORIGINAL PROFILE:
 {_format_profile(original)}
@@ -57,18 +57,22 @@ NEW OPTIMIZED PROFILE:
 {_format_profile(optimized)}
 
 EVALUATION CRITERIA:
-1. Were all the gaps addressed in the new profile? (Check the specific fixes).
-2. Did the optimizer hallucinate anything physically impossible or wildly inaccurate 
-   (e.g. adding a private beach to a city centre hotel)? Minor elaborations on existing 
-   amenities are acceptable.
+1. Were all the gaps addressed in the new profile?
+2. Did the optimizer hallucinate anything physically impossible (e.g. beach in city centre)?
+   Minor elaborations on existing amenities are acceptable.
 3. Is the tone natural and professional?
 
-If the new profile addresses the gaps without major hallucinations, it passes.
-If it failed to address high-severity gaps or invented ridiculous lies, it fails.
-"""
+Required JSON format:
+{{
+  "passed": <true|false>,
+  "feedback": "<detailed explanation>",
+  "hallucinations_detected": <true|false>,
+  "gaps_addressed": <true|false>
+}}
 
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(ValidationResult)
+Respond with ONLY the JSON object."""
+
+    structured_llm = get_structured_llm(ValidationResult)
     
     try:
         result = structured_llm.invoke(prompt)

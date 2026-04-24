@@ -9,7 +9,7 @@ prioritised list of gaps with suggested improvements.
 """
 
 from pydantic import BaseModel, Field
-from src.llm import get_llm
+from src.llm import get_structured_llm
 from src.state import AEOState
 
 
@@ -64,8 +64,8 @@ def gap_analyzer(state: AEOState) -> dict:
 
     print(f"\n>> [Agent 2.5: Gap Analyzer] Analysing gaps (score: {score}/100)...")
 
-    prompt = f"""You are an AEO (Answer Engine Optimization) expert. Analyse the following 
-hotel profile and its evaluation results to identify specific content gaps and weaknesses.
+    prompt = f"""You are an AEO (Answer Engine Optimization) expert identifying content gaps in a hotel profile.
+Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
 TRAVELLER QUERY: "{query}"
 
@@ -80,23 +80,33 @@ EVALUATION RESULTS:
     - Trust Signals: {sub_scores.get('trust_signals', 'N/A')}/20
     - Value Proposition: {sub_scores.get('value_proposition', 'N/A')}/20
     - Structured Data Quality: {sub_scores.get('structured_data_quality', 'N/A')}/20
-  
   Reasoning: {reasoning}
 
 INSTRUCTIONS:
 1. Identify every specific gap that caused the hotel to lose points.
-2. For each gap, specify which criterion it affects, describe the issue clearly,
-   rate its severity, and provide a concrete suggestion to fix it.
-3. Focus on ACTIONABLE improvements — things that can be added to the hotel's 
-   digital content/profile, not things the hotel needs to physically build.
+2. For each gap: specify criterion, describe the issue, rate severity (high/medium/low), suggest a concrete fix, estimate point gain.
+3. Focus on ACTIONABLE digital content improvements only.
 4. Order gaps by severity (high first).
-5. Be specific: instead of "add more amenities", say "list specific family-friendly 
-   amenities like kids' pool, babysitting service, family room packages".
-6. The total_recoverable_points should be realistic — fixing all gaps should bring 
-   the score close to but not necessarily 100."""
+5. Be specific — not "add amenities" but "list kids pool, babysitting, family packages".
 
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(GapAnalysisResult)
+Required JSON format:
+{{
+  "gaps": [
+    {{
+      "category": "<relevance|completeness|trust_signals|value_proposition|structured_data_quality>",
+      "description": "<what is missing or weak>",
+      "severity": "<high|medium|low>",
+      "suggested_improvement": "<specific actionable fix>",
+      "estimated_point_gain": <int>
+    }}
+  ],
+  "summary": "<one paragraph summary>",
+  "total_recoverable_points": <int>
+}}
+
+Respond with ONLY the JSON object."""
+
+    structured_llm = get_structured_llm(GapAnalysisResult)
 
     try:
         result = structured_llm.invoke(prompt)

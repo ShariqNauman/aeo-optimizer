@@ -7,7 +7,7 @@ Takes the original aggregated profile and the list of gaps, and
 outputs a new, optimized profile that resolves those weaknesses.
 """
 
-from src.llm import get_llm
+from src.llm import get_structured_llm
 from src.state import AEOState
 from src.agents.data_aggregation import HotelProfile
 
@@ -31,41 +31,37 @@ def optimizer(state: AEOState) -> dict:
         print("   No gaps to optimize. Skipping rewriting.")
         return {"optimized_profile": original_profile}
         
-    prompt = f"""You are an expert Answer Engine Optimization (AEO) copywriter.
-Your task is to take an existing hotel profile and REWRITE/ENHANCE it to address 
-a specific list of content gaps, making it highly optimized for AI travel assistants.
+    prompt = f"""You are an expert AEO copywriter rewriting a hotel profile to fix content gaps.
+Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
-TRAVELLER QUERY THE PROFILE IS OPTIMIZING FOR: "{query}"
+TRAVELLER QUERY: "{query}"
 
 ORIGINAL PROFILE:
 {_format_profile(original_profile)}
 
 IDENTIFIED GAPS TO FIX:
 {_format_gaps(gaps)}
-
 """
     if validation_feedback and retry_count > 0:
         prompt += f"""
-PREVIOUS VALIDATION FAILED WITH THIS FEEDBACK:
+PREVIOUS VALIDATION FAILED:
 "{validation_feedback}"
-Please ensure you fix these specific validation issues in this attempt!
+Please fix these specific issues in this attempt!
 """
-
     prompt += """
 INSTRUCTIONS:
-1. Rewrite the description, amenities, room types, dining options, and USPs to directly
-   address the gaps.
-2. If a gap asks for specific details (like "family amenities"), add reasonable, standard 
-   details that fit a hotel of this caliber if they weren't explicitly in the original, 
-   but DO NOT hallucinate wildly false claims (e.g., don't invent a beach if it's in a city).
-3. Ensure the tone is natural, professional, and appealing to humans, but highly 
-   structured and clear for AI parsing.
-4. Set `structured_data_available` to True.
-5. Return the full, updated profile.
-"""
+1. Rewrite description, amenities, room_types, dining_options, and unique_selling_points to address every gap.
+2. Add reasonable details that fit a hotel of this caliber — do NOT hallucinate impossible claims.
+3. Ensure the tone is natural and professional.
+4. Set structured_data_available to true.
 
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(HotelProfile)
+Required JSON fields: name, location, star_rating, description, amenities (list),
+room_types (list), dining_options (list), price_range, review_summary,
+unique_selling_points (list), nearby_attractions (list), contact_info, structured_data_available (bool).
+
+Respond with ONLY the JSON object."""
+
+    structured_llm = get_structured_llm(HotelProfile)
     
     try:
         optimized = structured_llm.invoke(prompt)

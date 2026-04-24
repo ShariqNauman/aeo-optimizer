@@ -19,7 +19,7 @@ def main():
     print("=" * 50)
     
     # Step 1: Initialize LLM
-    print("\n[1/3] Initializing Gemini LLM...")
+    print("\n[1/3] Initializing Z.AI LLM...")
     try:
         llm = get_llm()
         print("  [OK] LLM initialized successfully")
@@ -28,7 +28,7 @@ def main():
         return
     
     # Step 2: Send a test message
-    print("\n[2/3] Sending test message to Gemini...")
+    print("\n[2/3] Sending test message to Z.AI...")
     try:
         response = llm.invoke(
             "You are an AI travel assistant. "
@@ -43,14 +43,16 @@ def main():
     print("\n[3/3] Testing structured output (JSON mode)...")
     try:
         from pydantic import BaseModel, Field
+        from src.llm import get_structured_llm
         
         class TestHotel(BaseModel):
             name: str = Field(description="Name of the hotel")
             rating: int = Field(description="Star rating 1-5")
         
-        structured_llm = llm.with_structured_output(TestHotel)
+        structured_llm = get_structured_llm(TestHotel)
         result = structured_llm.invoke(
-            "Give me a fictional luxury hotel. Name: 'The Grand Azure'. Rating: 5 stars."
+            "Give me a fictional luxury hotel. Name: 'The Grand Azure'. Rating: 5 stars. "
+            "IMPORTANT: respond with ONLY a raw JSON object — no markdown, no code fences, no extra text."
         )
         print(f"  [OK] Structured output works!")
         print(f"    Hotel: {result.name}")
