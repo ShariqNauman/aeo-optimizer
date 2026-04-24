@@ -2,16 +2,69 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Box, History } from "lucide-react";
+import { Box, History, Home } from "lucide-react";
 
 export const NavigationToggle = () => {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isLanding = pathname === "/";
   const isRecords = pathname === "/records";
+  const isCube = pathname.startsWith("/cube");
 
-  // Hide on landing page
-  if (pathname === "/") return null;
+  // Determine the label, icon, and target based on context
+  const getToggleConfig = () => {
+    if (isLanding) {
+      // On landing page → go to records
+      return {
+        target: "/records",
+        label: "Historical_Archive",
+        icon: <History className="w-7 h-7 text-white" />,
+      };
+    }
+    if (isRecords) {
+      // On records page → go back to where user came from
+      // Check if they came from the cube page
+      const referrer = typeof window !== "undefined" ? sessionStorage.getItem("nav_referrer") : null;
+      if (referrer && referrer.startsWith("/cube")) {
+        return {
+          target: referrer,
+          label: "3D_Analysis_Cube",
+          icon: <Box className="w-7 h-7 text-white" />,
+        };
+      }
+      // Otherwise go to landing
+      return {
+        target: "/",
+        label: "Return_Home",
+        icon: <Home className="w-7 h-7 text-white" />,
+      };
+    }
+    if (isCube) {
+      // On cube page → go to records
+      return {
+        target: "/records",
+        label: "Historical_Archive",
+        icon: <History className="w-7 h-7 text-white" />,
+      };
+    }
+    // Fallback
+    return {
+      target: "/records",
+      label: "Historical_Archive",
+      icon: <History className="w-7 h-7 text-white" />,
+    };
+  };
+
+  const config = getToggleConfig();
+
+  const handleClick = () => {
+    // Store current path as the referrer before navigating
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("nav_referrer", pathname + (typeof window !== "undefined" ? window.location.search : ""));
+    }
+    router.push(config.target);
+  };
 
   return (
     <motion.div 
@@ -21,8 +74,8 @@ export const NavigationToggle = () => {
       className="fixed bottom-10 right-10 z-50"
     >
       <button
-        onClick={() => router.push(isRecords ? "/cube" : "/records")}
-        className="group relative flex items-center gap-5 bg-black/80 backdrop-blur-3xl text-white p-3 pr-10 rounded-full shadow-[0_30px_100px_-20px_rgba(0,0,0,0.8)] hover:scale-105 active:scale-95 transition-all border border-white/5 ring-1 ring-white/5 overflow-hidden"
+        onClick={handleClick}
+        className="group relative flex items-center gap-5 bg-black/80 backdrop-blur-3xl text-white p-3 pr-10 rounded-full shadow-[0_30px_100px_-20px_rgba(0,0,0,0.8)] hover:scale-105 active:scale-95 transition-all duration-200 border border-white/5 ring-1 ring-white/5 overflow-hidden cursor-pointer"
       >
         {/* Noise Texture Overlay */}
         <div 
@@ -33,11 +86,7 @@ export const NavigationToggle = () => {
         />
 
         <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center shadow-[0_0_30px_rgba(202,138,4,0.4)] group-hover:rotate-[20deg] transition-transform duration-700 relative z-10">
-          {isRecords ? (
-            <Box className="w-7 h-7 text-white" />
-          ) : (
-            <History className="w-7 h-7 text-white" />
-          )}
+          {config.icon}
         </div>
         
         <div className="flex flex-col items-start relative z-10">
@@ -46,7 +95,7 @@ export const NavigationToggle = () => {
             <span className="text-[10px] uppercase tracking-[0.4em] font-black font-mono text-accent/60">Switch_Mode</span>
           </div>
           <span className="text-sm font-heading font-bold tracking-wider text-white/90">
-            {isRecords ? "3D_Analysis_Cube" : "Historical_Archive"}
+            {config.label}
           </span>
         </div>
 

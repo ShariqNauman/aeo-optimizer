@@ -1,12 +1,12 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @config "../tailwind.config.ts";
 
 @theme {
-  --color-primary: #1C1917;
-  --color-secondary: #44403C;
+  --color-primary: #1E3A8A;
+  --color-secondary: #475569;
   --color-accent: #CA8A04;
-  --color-background: #FAFAF9;
-  --color-text: #0C0A09;
+  --color-background: #F8FAFC;
+  --color-text: #0F172A;
 
   --font-heading: var(--font-heading);
   --font-body: var(--font-body);

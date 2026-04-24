@@ -138,6 +138,14 @@ export const simulatePipeline = (
               finalScore: data.resim_score,
               delta: data.score_delta,
               status: data.resim_feedback || "Ready for deployment",
+              resim_feedback: data.resim_feedback,
+              breakdown: data.sub_scores || data.breakdown || {
+                relevance: Math.round((data.resim_score || 0) * 0.25),
+                completeness: Math.round((data.resim_score || 0) * 0.2),
+                trust_signals: Math.round((data.resim_score || 0) * 0.3),
+                value_proposition: Math.round((data.resim_score || 0) * 0.15),
+                structured_data_quality: Math.round((data.resim_score || 0) * 0.1),
+              },
             },
           },
         };

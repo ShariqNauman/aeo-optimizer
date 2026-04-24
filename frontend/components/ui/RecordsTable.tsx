@@ -29,7 +29,8 @@ export const RecordsTable = ({ records }: RecordsTableProps) => {
   };
 
   const handleDownload = (record: RecordEntry) => {
-    const dataStr = JSON.stringify(record, null, 2);
+    const { reasoning, ...reportData } = record;
+    const dataStr = JSON.stringify(reportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -42,7 +43,9 @@ export const RecordsTable = ({ records }: RecordsTableProps) => {
   };
 
   const handleNavigate = (record: RecordEntry) => {
-    router.push(`/cube?query=${encodeURIComponent(record.query)}&hotel=${encodeURIComponent(record.url)}`);
+    // Store record data in sessionStorage so cube page can restore it
+    sessionStorage.setItem("restore_record", JSON.stringify(record));
+    router.push(`/cube?query=${encodeURIComponent(record.query)}&hotel=${encodeURIComponent(record.url)}&restore=true`);
   };
 
   return (
@@ -108,9 +111,9 @@ export const RecordsTable = ({ records }: RecordsTableProps) => {
               <td className="px-8 py-6">
                 <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                   <button 
-                    onClick={() => handleCopy(record.id, record.reasoning)}
+                    onClick={() => handleCopy(record.id, JSON.stringify(record.optimized_profile || {}, null, 2))}
                     className="p-2.5 hover:bg-white rounded-xl border border-transparent hover:border-[#E7E5E4] transition-all text-secondary/40 hover:text-accent shadow-sm" 
-                    title="Copy Reasoning"
+                    title="Copy Optimized Content"
                   >
                     {copiedId === record.id ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500" />

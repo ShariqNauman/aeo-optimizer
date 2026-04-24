@@ -51,9 +51,13 @@ Please fix these specific issues in this attempt!
     prompt += """
 INSTRUCTIONS:
 1. Rewrite description, amenities, room_types, dining_options, and unique_selling_points to address every gap.
-2. Add reasonable details that fit a hotel of this caliber — do NOT hallucinate impossible claims.
-3. Ensure the tone is natural and professional.
-4. Set structured_data_available to true.
+2. You must ONLY refine, restructure, and enhance information that ALREADY EXISTS in the original profile.
+3. DO NOT invent new amenities, services, programs, or features that are not present in the original profile just to match the traveller's query. If the hotel does not have a specific feature, do not add it.
+4. You may reword, reorganize, and emphasize existing attributes for better machine readability and semantic clarity.
+5. Ensure the tone is natural and professional.
+6. Set structured_data_available to true.
+
+HARD CONSTRAINT: Never fabricate or hallucinate information. Only work with what the original profile provides. Your job is to optimize presentation, not to create fiction.
 
 Required JSON fields: name, location, star_rating, description, amenities (list),
 room_types (list), dining_options (list), price_range, review_summary,

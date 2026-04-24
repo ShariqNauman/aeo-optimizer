@@ -1,0 +1,10 @@
+de9bb68 feat: initialize full-stack AEO optimizer application with Supabase integration and LLM-powered discovery agents
+00d74b7 Draft a readme, change UI/UX project name to "WeBoosta". Redraft a mock data.
+b383217 fix: replaced Gemini API with Z.AI GLM API and fixed the system prompts to produce accurate output accordingly.
+7549ef6 Fix Next.js State route error
+ee3bf3d Implemented: 1) Move agent skills from frontend folder to outside. 2) Travel Agent Simulation in the landing page. 3) Database page with functional button like "export to csv". 4)In the detail panel of "Final result page",  Replace the "Finalize & Deploy"button to "Save to Database"
+db4d412 fix: The data is now correctly mapped in the gap analysis stage as well as the the content optimization stage.
+fe227ce fix: resolve WebSocket streaming, state mapping, and type errors
+8c44758 Merge pull request #2 from ShariqNauman/frontend
+28ead4c refactor: Moved the frontend logic into one folder 'frontend'
+49768c6 Merge pull request #1 from ShariqNauman/backend

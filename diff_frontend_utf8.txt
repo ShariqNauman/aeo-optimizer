@@ -1,0 +1,888 @@
+diff --git a/frontend/.env.local b/frontend/.env.local
+index 12b3620..3b98987 100644
+--- a/frontend/.env.local
++++ b/frontend/.env.local
+@@ -1,2 +1,2 @@
+-NEXT_PUBLIC_USE_MOCK=true
+-NEXT_PUBLIC_AUTO_MOCK=true
++NEXT_PUBLIC_USE_MOCK=false
++NEXT_PUBLIC_AUTO_MOCK=false
+diff --git a/frontend/app/cube/page.tsx b/frontend/app/cube/page.tsx
+index 6693969..80b05ab 100644
+--- a/frontend/app/cube/page.tsx
++++ b/frontend/app/cube/page.tsx
+@@ -54,6 +54,10 @@ export default function CubePage() {
+       const ws = simulatePipeline(query, hotel, (stageData) => {
+         // Update global store directly
+         addStage(stageData);
++        
++        // Auto-snap to the new stage as it arrives
++        setSelectedStage(stageData.stage);
++        
+         if (stageData.stage === "result") setIsSimulating(false);
+       });
+ 
+@@ -63,7 +67,7 @@ export default function CubePage() {
+         }
+       };
+     }
+-  }, [query, hotel, stages, addStage, _hasHydrated]);
++  }, [query, hotel, addStage, _hasHydrated]);
+ 
+   const handleFaceClick = (stage: Stage) => {
+     setSelectedStage(stage);
+diff --git a/frontend/app/layout.tsx b/frontend/app/layout.tsx
+index 255bd4a..42c79e8 100644
+--- a/frontend/app/layout.tsx
++++ b/frontend/app/layout.tsx
+@@ -1,7 +1,7 @@
+ import type { Metadata } from "next";
+ import { Karla, Playfair_Display_SC } from "next/font/google";
+ import "./globals.css";
+-import { NavigationToggle } from "@/components/ui/NavigationToggle";
++import { Navbar } from "@/components/ui/Navbar";
+ 
+ const karla = Karla({ 
+   subsets: ["latin"],
+@@ -27,8 +27,8 @@ export default function RootLayout({
+   return (
+     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
+       <body className={`${karla.variable} ${playfair.variable} font-body bg-background text-text antialiased`}>
++        <Navbar />
+         {children}
+-        <NavigationToggle />
+       </body>
+     </html>
+   );
+diff --git a/frontend/app/page.tsx b/frontend/app/page.tsx
+index 97aa1cd..0f2ef1f 100644
+--- a/frontend/app/page.tsx
++++ b/frontend/app/page.tsx
+@@ -34,15 +34,15 @@ export default function Home() {
+         >
+           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent font-semibold text-sm uppercase tracking-widest mb-4">
+             <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center text-white text-[10px] font-bold">W</div>
+-            WeBoosta AI Engine
++            WeBoosta Automation Suite
+           </div>
+           <h1 className="font-heading text-5xl md:text-7xl font-bold text-primary max-w-4xl leading-tight">
+             Visible to Agents, <br />
+             <span className="text-accent italic">Not Just Humans.</span>
+           </h1>
+           <p className="font-body text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
+-            <span className="font-bold text-primary">WeBoosta</span> simulates AI decision-making to reveal how travel agents see your hotel, 
+-            providing actionable signals to win more bookings.
++            <span className="font-bold text-primary">WeBoosta</span> automates the discovery and optimization of your hotel for the agentic economy, 
++            simulating AI decisions to instantly refine your digital presence for autonomous agents.
+           </p>
+         </motion.div>
+ 
+@@ -62,9 +62,9 @@ export default function Home() {
+             <div className="p-3 rounded-2xl bg-white shadow-sm border border-secondary/10">
+               <ShieldCheck className="w-6 h-6 text-accent" />
+             </div>
+-            <h3 className="font-heading text-lg font-bold">Decision Fidelity</h3>
++            <h3 className="font-heading text-lg font-bold">Automated Simulation</h3>
+             <p className="text-sm text-secondary">
+-              Simulate actual AI agent logic using Z.AI GLM reasoning.
++              Fully autonomous reasoning simulations using Z.AI GLM pipelines.
+             </p>
+           </div>
+           <div className="flex flex-col items-center text-center space-y-3">
+@@ -80,9 +80,9 @@ export default function Home() {
+             <div className="p-3 rounded-2xl bg-white shadow-sm border border-secondary/10">
+               <Zap className="w-6 h-6 text-accent" />
+             </div>
+-            <h3 className="font-heading text-lg font-bold">Instant Optimization</h3>
++            <h3 className="font-heading text-lg font-bold">Autonomous Optimization</h3>
+             <p className="text-sm text-secondary">
+-              Auto-generate agent-readable content in seconds.
++              Self-correcting content refinement loops executed in seconds.
+             </p>
+           </div>
+         </motion.div>
+diff --git a/frontend/app/records/page.tsx b/frontend/app/records/page.tsx
+index f56691c..416b4f9 100644
+--- a/frontend/app/records/page.tsx
++++ b/frontend/app/records/page.tsx
+@@ -1,19 +1,54 @@
+ "use client";
+ 
+-import { useState } from "react";
++import { useState, useEffect } from "react";
+ import { motion, AnimatePresence } from "framer-motion";
+ import { RecordsTable } from "@/components/ui/RecordsTable";
+ import { RecordsGrid } from "@/components/ui/RecordsGrid";
+-import { Download, Database, Filter, LayoutGrid, List, Search, X } from "lucide-react";
++import { Download, Database, Filter, LayoutGrid, List, Search, X, Loader2 } from "lucide-react";
+ import { Button } from "@/components/ui/Button";
+-import { useSessionStore } from "@/lib/store";
++import { supabase } from "@/lib/supabase";
++import { RecordEntry } from "@/lib/mockRecords";
+ 
+ export default function RecordsPage() {
+-  const { records } = useSessionStore();
++  const [records, setRecords] = useState<RecordEntry[]>([]);
++  const [loading, setLoading] = useState(true);
+   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+   const [searchQuery, setSearchQuery] = useState("");
+   const [isSearchOpen, setIsSearchOpen] = useState(false);
+ 
++  useEffect(() => {
++    const fetchRecords = async () => {
++      try {
++        const { data, error } = await supabase
++          .from('optimization_records')
++          .select('*')
++          .order('created_at', { ascending: false });
++
++        if (error) throw error;
++
++        if (data) {
++          const formatted: RecordEntry[] = data.map((r: any) => ({
++            id: r.id,
++            date: new Date(r.created_at).toLocaleDateString(),
++            query: r.query,
++            url: r.hotel_url,
++            baseline: r.baseline_score,
++            optimized: r.optimized_score,
++            delta: (r.delta >= 0 ? "+" : "") + r.delta,
++            reasoning: r.reasoning
++          }));
++          setRecords(formatted);
++        }
++      } catch (err) {
++        console.error("Failed to fetch records:", err);
++      } finally {
++        setLoading(false);
++      }
++    };
++
++    fetchRecords();
++  }, []);
++
+   const filteredRecords = records.filter(record => 
+     record.query.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     record.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+@@ -160,7 +195,12 @@ export default function RecordsPage() {
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 0.8, delay: 0.2 }}
+         >
+-          {viewMode === "list" ? (
++          {loading ? (
++            <div className="flex flex-col items-center justify-center py-40 space-y-4">
++              <Loader2 className="w-10 h-10 text-accent animate-spin" />
++              <p className="text-[10px] uppercase tracking-[0.4em] font-black font-mono text-secondary/40">Synchronizing_Archive...</p>
++            </div>
++          ) : viewMode === "list" ? (
+             <div className="bg-white border border-[#E7E5E4] rounded-[2.5rem] overflow-hidden shadow-xl shadow-[#1C1917]/5">
+               <RecordsTable records={filteredRecords} />
+             </div>
+diff --git a/frontend/components/panel/ResultPanel.tsx b/frontend/components/panel/ResultPanel.tsx
+index bde623d..e8326a9 100644
+--- a/frontend/components/panel/ResultPanel.tsx
++++ b/frontend/components/panel/ResultPanel.tsx
+@@ -16,11 +16,11 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
+ 
+   const breakdown = content.breakdown || {};
+   const radarData = [
+-    { criterion: "Relevance", score: breakdown.relevance || 18, fullMark: 20 },
+-    { criterion: "Completeness", score: breakdown.completeness || 19, fullMark: 20 },
+-    { criterion: "Trust", score: breakdown.trust_signals || 12, fullMark: 20 },
+-    { criterion: "Value", score: breakdown.value_proposition || 10, fullMark: 20 },
+-    { criterion: "Structure", score: breakdown.structured_data_quality || 8, fullMark: 20 },
++    { criterion: "Relevance", score: breakdown.relevance || 0, fullMark: 20 },
++    { criterion: "Completeness", score: breakdown.completeness || 0, fullMark: 20 },
++    { criterion: "Trust", score: breakdown.trust_signals || 0, fullMark: 20 },
++    { criterion: "Value", score: breakdown.value_proposition || 0, fullMark: 20 },
++    { criterion: "Structure", score: breakdown.structured_data_quality || 0, fullMark: 20 },
+   ];
+ 
+   const handleSaveToDatabase = () => {
+@@ -30,9 +30,9 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
+       date: new Date().toISOString().split('T')[0],
+       query: query || "Custom Discovery Session",
+       url: hotel || "https://example.com",
+-      baseline: content.finalScore - content.delta || 48,
+-      optimized: content.finalScore || 74,
+-      delta: content.delta ? `+${content.delta}` : "+26",
++      baseline: (content.finalScore || 0) - (content.delta || 0),
++      optimized: content.finalScore || 0,
++      delta: content.delta ? `+${content.delta}` : "+0",
+       reasoning: content.resim_feedback || content.status || "Optimization complete."
+     });
+ 
+diff --git a/frontend/components/ui/DiscoveryChat.tsx b/frontend/components/ui/DiscoveryChat.tsx
+index b276e8b..05be1e9 100644
+--- a/frontend/components/ui/DiscoveryChat.tsx
++++ b/frontend/components/ui/DiscoveryChat.tsx
+@@ -20,7 +20,7 @@ import {
+ import { Button } from "./Button";
+ import { useSessionStore } from "@/lib/store";
+ 
+-export type ViewState = "INITIAL" | "SEARCHING" | "RESULTS" | "INVESTIGATION";
++export type ViewState = "INITIAL" | "SEARCHING" | "RESULTS" | "INVESTIGATION" | "TERMINATED";
+ 
+ interface DiscoveryChatProps {
+   onDiscoverWhy: (query: string, hotelUrl: string) => void;
+@@ -33,6 +33,9 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
+   const [hotelUrl, setHotelUrl] = useState("");
+   const [statusIndex, setStatusIndex] = useState(0);
+   const [submittedQuery, setSubmittedQuery] = useState("");
++  const [hotels, setHotels] = useState<{name: string, url: string}[]>([]);
++  const [isError, setIsError] = useState(false);
++  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+   const setSession = useSessionStore((state) => state.setSession);
+   const clearSession = useSessionStore((state) => state.clearSession);
+   
+@@ -49,31 +52,53 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
+     if (viewState === "SEARCHING") {
+       interval = setInterval(() => {
+         setStatusIndex((prev) => {
++          // Stay on the last message if still searching
+           if (prev < statusMessages.length - 1) return prev + 1;
+           return prev;
+         });
+-      }, 1500);
++      }, 2000);
+     }
+     return () => { if (interval) clearInterval(interval); };
+   }, [viewState, statusMessages.length]);
+ 
+-  // Handle transition to RESULTS separately to avoid updating parent state during render/state-update cycles
+-  useEffect(() => {
+-    if (viewState === "SEARCHING" && statusIndex === statusMessages.length - 1) {
+-      const timeout = setTimeout(() => {
+-        setViewState("RESULTS");
+-      }, 1500);
+-      return () => clearTimeout(timeout);
+-    }
+-  }, [viewState, statusIndex, setViewState, statusMessages.length]);
+-
+-  const handleSubmit = (e: React.FormEvent) => {
++  const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!query.trim()) return;
++    
+     setSubmittedQuery(query);
+-    setSession(query, ""); // Store initial query
++    setSession(query, ""); 
+     setViewState("SEARCHING");
+     setStatusIndex(0);
++    setIsError(false);
++
++    try {
++      const response = await fetch("http://127.0.0.1:8000/api/search_hotels", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ query: query }),
++      });
++
++      if (!response.ok) throw new Error("Search failed");
++
++      const data = await response.json();
++      
++      if (data.is_valid === false) {
++        setHotels([]);
++        setIsError(true);
++        setErrorMessage(data.error_message || "Invalid query detected.");
++      } else {
++        setHotels(data.hotels);
++        setIsError(false);
++        setErrorMessage(null);
++      }
++      setViewState("RESULTS");
++    } catch (error) {
++      console.error("Discovery error:", error);
++      setIsError(true);
++      // Fallback to initial if failed? Or stay on searching with error?
++      // Let's go to results but show error message
++      setViewState("RESULTS");
++    }
+   };
+ 
+   const handleReset = () => {
+@@ -82,14 +107,14 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
+     setQuery("");
+     setHotelUrl("");
+     setSubmittedQuery("");
++    setHotels([]);
++    setErrorMessage(null);
+   };
+ 
+-  const mockHotels = [
+-    { name: "Mandarin Oriental Kuala Lumpur", url: "https://www.mandarinoriental.com/en/kuala-lumpur/petronas-towers" },
+-    { name: "Four Seasons Hotel Kuala Lumpur", url: "https://www.fourseasons.com/kualalumpur/" },
+-    { name: "EQ Kuala Lumpur", url: "https://www.eqkualalumpur.com/" },
+-    { name: "The Ritz-Carlton, Kuala Lumpur", url: "https://www.ritzcarlton.com/en/hotels/malaysia/kuala-lumpur" },
+-  ];
++  const handleTerminate = () => {
++    clearSession();
++    setViewState("TERMINATED");
++  };
+ 
+   return (
+     <div className="w-full max-w-3xl mx-auto px-4 perspective-1000">
+@@ -247,56 +272,112 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
+                             >
+                               <div className="space-y-4">
+                                 <h3 className="text-accent text-[9px] uppercase tracking-[0.5em] font-black">Output_Stream:</h3>
+-                                <p className="text-white/80 leading-relaxed font-body text-lg italic">
+-                                  Retrieval complete. AI agentic pathways established for the following properties:
+-                                </p>
++                                {isError ? (
++                                  <p className="text-red-400 leading-relaxed font-mono text-xs italic bg-red-500/10 p-4 border border-red-500/20 rounded-xl">
++                                    [Validation_Error]: {errorMessage || "Retrieval failure. Search API returned non-zero exit code."}
++                                  </p>
++                                ) : (
++                                  <p className="text-white/80 leading-relaxed font-body text-lg italic">
++                                    Retrieval complete. AI agentic pathways established for the following properties:
++                                  </p>
++                                )}
+                               </div>
+ 
+                               <div className="grid gap-4">
+-                                {mockHotels.map((hotel, i) => (
+-                                  <motion.a
+-                                    key={hotel.name}
+-                                    href={hotel.url}
+-                                    target="_blank"
+-                                    rel="noopener noreferrer"
+-                                    initial={{ opacity: 0, scale: 0.95 }}
+-                                    animate={{ opacity: 1, scale: 1 }}
+-                                    transition={{ delay: 0.4 + i * 0.1 }}
+-                                    className="flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-lg"
+-                                  >
+-                                    <div className="flex items-center gap-6">
+-                                      <div className="w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center group-hover:bg-accent/20 transition-all group-hover:scale-110">
+-                                        <Hotel className="w-5 h-5 text-accent" />
++                                {hotels.length > 0 ? (
++                                  hotels.map((hotel, i) => (
++                                    <motion.a
++                                      key={`${hotel.name}-${i}`}
++                                      href={hotel.url}
++                                      target="_blank"
++                                      rel="noopener noreferrer"
++                                      initial={{ opacity: 0, scale: 0.95 }}
++                                      animate={{ opacity: 1, scale: 1 }}
++                                      transition={{ delay: 0.4 + i * 0.1 }}
++                                      className="flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-lg"
++                                    >
++                                      <div className="flex items-center gap-6">
++                                        <div className="w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center group-hover:bg-accent/20 transition-all group-hover:scale-110">
++                                          <Hotel className="w-5 h-5 text-accent" />
++                                        </div>
++                                        <span className="text-white text-lg font-medium tracking-tight group-hover:text-accent transition-colors">{hotel.name}</span>
+                                       </div>
+-                                      <span className="text-white text-lg font-medium tracking-tight group-hover:text-accent transition-colors">{hotel.name}</span>
+-                                    </div>
+-                                    <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+-                                  </motion.a>
+-                                ))}
++                                      <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
++                                    </motion.a>
++                                  ))
++                                ) : !isError && (
++                                  <p className="text-white/20 font-mono text-[10px] text-center py-10 uppercase tracking-[0.3em]">
++                                    No candidates discovered in current sector.
++                                  </p>
++                                )}
+                               </div>
+ 
+-                              <motion.div
+-                                initial={{ opacity: 0 }}
+-                                animate={{ opacity: 1 }}
+-                                transition={{ delay: 1 }}
+-                                className="pt-8 flex flex-col sm:flex-row gap-4"
+-                              >
+-                                <Button
+-                                  onClick={() => setViewState("INVESTIGATION")}
+-                                  className="flex-1 py-8 bg-accent hover:bg-accent/90 text-white font-black tracking-[0.4em] uppercase text-xs group shadow-[0_0_40px_rgba(202,138,4,0.3)] border-none rounded-2xl"
++                              {!isError && (
++                                <motion.div
++                                  initial={{ opacity: 0 }}
++                                  animate={{ opacity: 1 }}
++                                  transition={{ delay: 1 }}
++                                  className="pt-8 flex flex-col sm:flex-row gap-4"
+                                 >
+-                                  Discover_Why
+-                                  <Sparkles className="ml-3 w-5 h-5 group-hover:scale-125 transition-transform" />
+-                                </Button>
+-                                <Button
+-                                  onClick={handleReset}
+-                                  variant="outline"
+-                                  className="flex-1 py-8 border-white/10 text-white/40 hover:text-white hover:bg-white/5 font-black tracking-[0.4em] uppercase text-xs rounded-2xl transition-all"
++                                  <Button
++                                    onClick={() => setViewState("INVESTIGATION")}
++                                    className="flex-1 py-8 bg-accent hover:bg-accent/90 text-white font-black tracking-[0.4em] uppercase text-xs group shadow-[0_0_40px_rgba(202,138,4,0.3)] border-none rounded-2xl"
++                                  >
++                                    Discover_Why
++                                    <Sparkles className="ml-3 w-5 h-5 group-hover:scale-125 transition-transform" />
++                                  </Button>
++                                  <Button
++                                    onClick={handleTerminate}
++                                    variant="outline"
++                                    className="flex-1 py-8 border-white/10 text-white/40 hover:text-white hover:bg-white/5 font-black tracking-[0.4em] uppercase text-xs rounded-2xl transition-all"
++                                  >
++                                    End_Discovery
++                                    <RefreshCw className="ml-3 w-4 h-4" />
++                                  </Button>
++                                </motion.div>
++                              )}
++
++                              {isError && (
++                                <motion.div
++                                  initial={{ opacity: 0 }}
++                                  animate={{ opacity: 1 }}
++                                  className="pt-8 flex justify-center"
+                                 >
+-                                  End_Discovery
+-                                  <RefreshCw className="ml-3 w-4 h-4" />
+-                                </Button>
+-                              </motion.div>
++                                  <Button
++                                    onClick={handleReset}
++                                    variant="outline"
++                                    className="border-accent/20 text-accent hover:bg-accent/10 font-bold uppercase tracking-widest text-[10px] py-6 px-10 rounded-2xl"
++                                  >
++                                    Try Another Query
++                                  </Button>
++                                </motion.div>
++                              )}
++                            </motion.div>
++                          )}
++
++                          {viewState === "TERMINATED" && (
++                            <motion.div
++                              key="terminated-state"
++                              initial={{ opacity: 0, scale: 0.95 }}
++                              animate={{ opacity: 1, scale: 1 }}
++                              className="flex flex-col items-center justify-center py-20 text-center space-y-6"
++                            >
++                              <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
++                                <Bot className="w-10 h-10 text-white/20" />
++                              </div>
++                              <div className="space-y-2">
++                                <h3 className="text-white font-heading text-2xl font-bold uppercase tracking-widest">Session Terminated</h3>
++                                <p className="text-white/40 font-body text-sm max-w-xs mx-auto">
++                                  Agentic discovery protocol successfully closed. Thank you for using AEO Optimizer.
++                                </p>
++                              </div>
++                              <Button
++                                onClick={handleReset}
++                                variant="outline"
++                                className="mt-8 border-accent/20 text-accent hover:bg-accent/10 font-bold uppercase tracking-widest text-[10px]"
++                              >
++                                Start New Session
++                              </Button>
+                             </motion.div>
+                           )}
+ 
+diff --git a/frontend/components/ui/Navbar.tsx b/frontend/components/ui/Navbar.tsx
+new file mode 100644
+index 0000000..dd751cb
+--- /dev/null
++++ b/frontend/components/ui/Navbar.tsx
+@@ -0,0 +1,54 @@
++"use client";
++
++import Link from "next/link";
++import { usePathname } from "next/navigation";
++import { motion } from "framer-motion";
++import { Database, Home, Cpu, Layers } from "lucide-react";
++
++export const Navbar = () => {
++  const pathname = usePathname();
++
++  const navItems = [
++    { name: "Home", path: "/", icon: Home },
++    { name: "Database", path: "/records", icon: Database },
++  ];
++
++  return (
++    <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 p-1.5 bg-[#0C0A09]/90 backdrop-blur-2xl border border-accent/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
++      {navItems.map((item) => {
++        const isActive = pathname === item.path;
++        return (
++          <Link key={item.path} href={item.path}>
++            <div className={`relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-500 group ${
++              isActive ? "text-white" : "text-white/30 hover:text-white/60"
++            }`}>
++              {isActive && (
++                <motion.div
++                  layoutId="nav-glow"
++                  className="absolute inset-0 bg-accent/10 border border-accent/20 rounded-xl"
++                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
++                />
++              )}
++              <item.icon className={`w-3.5 h-3.5 transition-transform duration-500 group-hover:scale-110 ${isActive ? "text-accent" : ""}`} />
++              <span className="text-[9px] uppercase tracking-[0.3em] font-black font-mono whitespace-nowrap">
++                {item.name}
++              </span>
++            </div>
++          </Link>
++        );
++      })}
++      
++      <div className="w-[1px] h-6 bg-white/5 mx-2" />
++      
++      <div className="flex items-center gap-4 px-5 py-1">
++        <div className="relative">
++          <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_12px_rgba(202,138,4,0.8)] animate-pulse" />
++          <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-accent animate-ping opacity-20" />
++        </div>
++        <span className="text-[8px] uppercase tracking-[0.5em] font-black font-mono text-accent/40">
++          Agentic_Mode
++        </span>
++      </div>
++    </nav>
++  );
++};
+diff --git a/frontend/lib/simulation.ts b/frontend/lib/simulation.ts
+index a64219b..4f1dae6 100644
+--- a/frontend/lib/simulation.ts
++++ b/frontend/lib/simulation.ts
+@@ -34,19 +34,36 @@ export const simulatePipeline = (
+ 
+       let stageData: StageData | null = null;
+ 
+-      if (agentName === "data_aggregation") {
++      if (agentName === "web_researcher") {
++        stageData = {
++          stage: "original",
++          title: "Web Research",
++          preview: `Found ${data.sources?.length || 0} credible sources.`,
++          details: {
++            query,
++            hotel,
++            content: {
++              description: "Researching property across the web...",
++              sources: data.sources || [],
++            },
++          },
++        };
++      } else if (agentName === "data_aggregation") {
++        const profile = data.aggregated_profile || {};
+         stageData = {
+           stage: "original",
+           title: "Original Profile",
+-          preview: "Raw Hotel Data Ingested",
++          preview: profile.name ? `${profile.name} ingested.` : "Raw Hotel Data Ingested",
+           details: {
+             query,
+             hotel,
+             content: {
+-              description:
+-                data.aggregated_profile?.description || "Ingested data...",
+-              amenities: data.aggregated_profile?.amenities || [],
+-              price: "N/A",
++              description: profile.description || "Ingested data...",
++              amenities: profile.amenities || [],
++              room_types: profile.room_types || [],
++              dining_options: profile.dining_options || [],
++              unique_selling_points: profile.unique_selling_points || [],
++              price: profile.price_range || "N/A",
+             },
+           },
+         };
+@@ -79,18 +96,19 @@ export const simulatePipeline = (
+           },
+         };
+       } else if (agentName === "optimizer") {
++        const opt = data.optimized_profile || {};
+         stageData = {
+           stage: "optimization",
+           title: "Content Optimization",
+-          preview: "Profile Updated",
++          preview: "Profile Updated & Enhanced",
+           details: {
+             query,
+             hotel,
+-            isApproved: false,
++            isApproved: true,
+             content: {
+-              optimizedProfile: data.optimized_profile || {},
+-              improvedDescription: data.optimized_profile?.description || "",
+-              improvements: data.optimized_profile?.unique_selling_points || [],
++              optimizedProfile: opt,
++              improvedDescription: opt.description || "",
++              improvements: opt.unique_selling_points || [],
+             },
+           },
+         };
+@@ -119,7 +137,7 @@ export const simulatePipeline = (
+             content: {
+               finalScore: data.resim_score,
+               delta: data.score_delta,
+-              status: "Ready for deployment",
++              status: data.resim_feedback || "Ready for deployment",
+             },
+           },
+         };
+@@ -128,6 +146,22 @@ export const simulatePipeline = (
+       if (stageData) {
+         onStageComplete(stageData);
+       }
++    } else if (response.type === "error") {
++      console.error("Pipeline Error:", response.message);
++      // Create an error stage to show in the UI
++      onStageComplete({
++        stage: "original",
++        title: "Error",
++        preview: "Pipeline Execution Failed",
++        details: {
++          query,
++          hotel,
++          content: {
++            description: `[Error] ${response.message}`,
++            status: "Error",
++          }
++        }
++      });
+     }
+   };
+ 
+diff --git a/frontend/lib/store.ts b/frontend/lib/store.ts
+index 91735ab..c465fe4 100644
+--- a/frontend/lib/store.ts
++++ b/frontend/lib/store.ts
+@@ -23,7 +23,7 @@ export const useSessionStore = create<SessionState>()(
+       query: "",
+       hotelUrl: "",
+       stages: {},
+-      records: mockRecords, // Initialize with default mock data
++      records: [], // Always start empty, fetched from Supabase on demand
+       _hasHydrated: false,
+       setHasHydrated: (state) => set({ _hasHydrated: state }),
+       setSession: (query, hotelUrl) => set((state) => {
+@@ -34,16 +34,19 @@ export const useSessionStore = create<SessionState>()(
+       addStage: (stageData) => set((state) => ({ 
+         stages: { ...state.stages, [stageData.stage]: stageData } 
+       })),
+-      addRecord: (record) => set((state) => ({
+-        records: [
+-          { ...record, id: Math.max(0, ...state.records.map(r => r.id)) + 1 },
+-          ...state.records
+-        ]
+-      })),
++      addRecord: (record) => {
++        // Records are now saved to Supabase via the backend
++        console.log("Record archived to cloud:", record);
++      },
+       clearSession: () => set({ query: "", hotelUrl: "", stages: {} }),
+     }),
+     {
+       name: "aeo-session-storage",
++      partialize: (state) => ({ 
++        query: state.query, 
++        hotelUrl: state.hotelUrl,
++        stages: state.stages
++      }), // Exclude records from local storage persistence
+       onRehydrateStorage: () => (state) => {
+         state?.setHasHydrated(true);
+       }
+diff --git a/frontend/lib/supabase.ts b/frontend/lib/supabase.ts
+new file mode 100644
+index 0000000..f886bdd
+--- /dev/null
++++ b/frontend/lib/supabase.ts
+@@ -0,0 +1,6 @@
++import { createClient } from '@supabase/supabase-js'
++
++const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://cbkaghekauuerzxmdpot.supabase.co'
++const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNia2FnaGVrYXV1ZXJ6eG1kcG90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzkyNzAsImV4cCI6MjA5MjYxNTI3MH0.JJUozmD9slF4OqRX_z9vL8xtt9YCyo1TqSWA-YD1u0w'
++
++export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 648a410..5b5d8f8 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -10,6 +10,7 @@
+       "dependencies": {
+         "@react-three/drei": "^10.0.0",
+         "@react-three/fiber": "^9.0.0",
++        "@supabase/supabase-js": "^2.104.1",
+         "@tailwindcss/postcss": "latest",
+         "clsx": "^2.0.0",
+         "framer-motion": "^12.38.0",
+@@ -1436,6 +1437,92 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.104.1.tgz",
++      "integrity": "sha512-pqFnDKekq1isqlqnzqzyJ3mzmho+o+FjfVTqhKY3PFlwj2anx3OPznO1kbo1ZEwD8zg1r4EAFf/7pplLyX0ocQ==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.104.1.tgz",
++      "integrity": "sha512-JjAH4JN9rZzxh4plQnILPrQZXAG6ccoRS6z9hQAGmXpRSwJA+7CWbsDV2R82I8MROlGDsjqj1Ot/cWpTfdf6xg==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/phoenix": {
++      "version": "0.4.0",
++      "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.0.tgz",
++      "integrity": "sha512-RHSx8bHS02xwfHdAbX5Lpbo6PXbgyf7lTaXTlwtFDPwOIw64NnVRwFAXGojHhjtVYI+PEPNSWwkL90f4agN3bw==",
++      "license": "MIT"
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.104.1.tgz",
++      "integrity": "sha512-RqlLpvgXsjcc27fLyHNGm3zN0KDWXbkdTdaFtaEdX83RsTEqH7BAmshH7zoUMml5lL04naUeRjS3B81O6jZcJw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.104.1.tgz",
++      "integrity": "sha512-dVJHhFB2ErBd0/2qE9G8CedCrGoAtBfL9Q4zbSMXO7b1Cpld916ljSiX21mURUqijPf1WoPQG4Bp/averUzk/g==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/phoenix": "^0.4.0",
++        "@types/ws": "^8.18.1",
++        "tslib": "2.8.1",
++        "ws": "^8.18.2"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.104.1.tgz",
++      "integrity": "sha512-2bQaLbkRshctkUVuqamwYZDEd+0cGSc9DY9sjh92DcA5hu1F/1AP8p6gxGr76sgdK9Ngi0rh+2Kdh+uC4hcnGA==",
++      "license": "MIT",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.104.1",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.104.1.tgz",
++      "integrity": "sha512-E0H/CtVmaGjiAy+ieZ5ZB/1EqxXcGdaFaAc23AE5zaYfz6NtCNDcmaEdoGPYMPFH5pE6drGG6e3ljPmkFoGVxQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/auth-js": "2.104.1",
++        "@supabase/functions-js": "2.104.1",
++        "@supabase/postgrest-js": "2.104.1",
++        "@supabase/realtime-js": "2.104.1",
++        "@supabase/storage-js": "2.104.1"
++      },
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/@swc/helpers": {
+       "version": "0.5.15",
+       "resolved": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.15.tgz",
+@@ -1805,7 +1892,6 @@
+       "version": "25.6.0",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-25.6.0.tgz",
+       "integrity": "sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==",
+-      "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "undici-types": "~7.19.0"
+@@ -1870,6 +1956,15 @@
+       "integrity": "sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==",
+       "license": "MIT"
+     },
++    "node_modules/@types/ws": {
++      "version": "8.18.1",
++      "resolved": "https://registry.npmjs.org/@types/ws/-/ws-8.18.1.tgz",
++      "integrity": "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": "*"
++      }
++    },
+     "node_modules/@typescript-eslint/eslint-plugin": {
+       "version": "8.58.2",
+       "resolved": "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.58.2.tgz",
+@@ -4552,6 +4647,15 @@
+       "integrity": "sha512-VSIRpLfRwlAAdGL4wiTucx2ScRipo0ed1FBatWkyt832jC4CReKstga6yIhYVwGu9LOBjuX9wzmRMeQdBJtzEA==",
+       "license": "Apache-2.0"
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/ieee754": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz",
+@@ -7310,7 +7414,6 @@
+       "version": "7.19.2",
+       "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-7.19.2.tgz",
+       "integrity": "sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/unrs-resolver": {
+@@ -7554,6 +7657,27 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/ws": {
++      "version": "8.20.0",
++      "resolved": "https://registry.npmjs.org/ws/-/ws-8.20.0.tgz",
++      "integrity": "sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=10.0.0"
++      },
++      "peerDependencies": {
++        "bufferutil": "^4.0.1",
++        "utf-8-validate": ">=5.0.2"
++      },
++      "peerDependenciesMeta": {
++        "bufferutil": {
++          "optional": true
++        },
++        "utf-8-validate": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/yallist": {
+       "version": "3.1.1",
+       "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz",
+diff --git a/frontend/package.json b/frontend/package.json
+index 70e174b..74b5ab5 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -12,6 +12,7 @@
+   "dependencies": {
+     "@react-three/drei": "^10.0.0",
+     "@react-three/fiber": "^9.0.0",
++    "@supabase/supabase-js": "^2.104.1",
+     "@tailwindcss/postcss": "latest",
+     "clsx": "^2.0.0",
+     "framer-motion": "^12.38.0",

@@ -30,7 +30,8 @@ export const RecordsGrid = ({ records }: RecordsGridProps) => {
   };
 
   const handleDownload = (record: RecordEntry) => {
-    const dataStr = JSON.stringify(record, null, 2);
+    const { reasoning, ...reportData } = record;
+    const dataStr = JSON.stringify(reportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -43,7 +44,9 @@ export const RecordsGrid = ({ records }: RecordsGridProps) => {
   };
 
   const handleNavigate = (record: RecordEntry) => {
-    router.push(`/cube?query=${encodeURIComponent(record.query)}&hotel=${encodeURIComponent(record.url)}`);
+    // Store record data in sessionStorage so cube page can restore it
+    sessionStorage.setItem("restore_record", JSON.stringify(record));
+    router.push(`/cube?query=${encodeURIComponent(record.query)}&hotel=${encodeURIComponent(record.url)}&restore=true`);
   };
 
   if (records.length === 0) {
@@ -121,9 +124,9 @@ export const RecordsGrid = ({ records }: RecordsGridProps) => {
           <div className="flex items-center justify-between pt-4 border-t border-[#E7E5E4] mt-auto">
             <div className="flex gap-2">
               <button 
-                onClick={() => handleCopy(record.id, record.reasoning)}
+                onClick={() => handleCopy(record.id, JSON.stringify(record.optimized_profile || {}, null, 2))}
                 className="p-2 hover:bg-[#F9F8F7] rounded-xl border border-transparent hover:border-[#E7E5E4] transition-all text-secondary/40 hover:text-accent" 
-                title="Copy Reasoning"
+                title="Copy Optimized Content"
               >
                 {copiedId === record.id ? (
                   <CheckCircle2 className="w-4 h-4 text-green-500" />

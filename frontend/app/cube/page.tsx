@@ -33,20 +33,88 @@ export default function CubePage() {
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Sync URL params to store if present, but wait for hydration
   useEffect(() => {
     if (!_hasHydrated) return;
 
     const urlQuery = searchParams.get("query");
     const urlHotel = searchParams.get("hotel");
+    const isRestore = searchParams.get("restore") === "true";
     
     if (urlQuery && urlHotel && (urlQuery !== storedQuery || urlHotel !== storedHotel)) {
       setSession(urlQuery, urlHotel);
+    }
+
+    // If restoring from a past record, hydrate stages from sessionStorage
+    if (isRestore) {
+      const raw = sessionStorage.getItem("restore_record");
+      if (raw) {
+        try {
+          const record = JSON.parse(raw);
+          sessionStorage.removeItem("restore_record");
+
+          // Build stage data from the saved record
+          const originalProfile = record.original_profile || {};
+          const optimizedProfile = record.optimized_profile || {};
+          const baseline = record.baseline || 0;
+          const optimized = record.optimized || 0;
+          const delta = optimized - baseline;
+
+          const restoredStages: StageData[] = [
+            {
+              stage: "original",
+              title: "Original Profile",
+              preview: "Restored from Archive",
+              details: { query: record.query, hotel: record.url, content: originalProfile },
+            },
+            {
+              stage: "evaluation",
+              title: "AI Evaluation",
+              preview: `Score: ${baseline} / 100`,
+              details: { query: record.query, hotel: record.url, content: { score: baseline, reasoning: record.reasoning || "", breakdown: { relevance: Math.round(baseline * 0.25), completeness: Math.round(baseline * 0.2), trust_signals: Math.round(baseline * 0.3), value_proposition: Math.round(baseline * 0.15), structured_data_quality: Math.round(baseline * 0.1) } } },
+            },
+            {
+              stage: "gap",
+              title: "Gap Analysis",
+              preview: "Restored from Archive",
+              details: { query: record.query, hotel: record.url, content: { gaps: [] } },
+            },
+            {
+              stage: "optimization",
+              title: "Content Optimization",
+              preview: `Profile Enhanced +${delta}`,
+              details: { query: record.query, hotel: record.url, isApproved: true, content: { optimizedProfile, improvedDescription: optimizedProfile.description || "", improvements: optimizedProfile.unique_selling_points || [] } },
+            },
+            {
+              stage: "validation",
+              title: "AI Validation",
+              preview: "Passed (Archived)",
+              details: { query: record.query, hotel: record.url, content: { confidence: 0.99, status: "Restored from historical archive." } },
+            },
+            {
+              stage: "result",
+              title: "Final Result",
+              preview: `+${delta} Improvement`,
+              details: { query: record.query, hotel: record.url, content: { finalScore: optimized, delta, status: "Restored from Archive", resim_feedback: record.reasoning || "Optimization complete.", breakdown: { relevance: Math.round(optimized * 0.25), completeness: Math.round(optimized * 0.2), trust_signals: Math.round(optimized * 0.3), value_proposition: Math.round(optimized * 0.15), structured_data_quality: Math.round(optimized * 0.1) } } },
+            },
+          ];
+
+          restoredStages.forEach((s, i) => {
+            setTimeout(() => {
+              addStage(s);
+              setSelectedStage(s.stage);
+            }, i * 300);
+          });
+        } catch (e) {
+          console.error("Failed to restore record:", e);
+        }
+      }
+      return; // Skip normal simulation
     }
   }, [searchParams, storedQuery, storedHotel, setSession, _hasHydrated]);
 
   useEffect(() => {
     if (!_hasHydrated) return;
+    if (searchParams.get("restore") === "true") return; // Skip simulation for restored records
 
     // Only simulate if we have a query/hotel AND no stages yet
     if (query && hotel && Object.keys(stages).length === 0) {

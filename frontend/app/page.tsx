@@ -17,7 +17,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#FAFAF9]">
+    <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background">
       {/* Background Liquid Glass Elements */}
       <div className="absolute top-0 left-0 w-full h-full -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-accent/10 blur-[120px] animate-pulse" />

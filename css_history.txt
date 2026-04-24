@@ -1,0 +1,99 @@
+commit 00d74b7b36708e3dd50de5cbc2aa97bb0946f3d5
+Author: Lpx-0128 <pingxianleel@gmail.com>
+Date:   Fri Apr 24 13:55:46 2026 +0800
+
+    Draft a readme, change UI/UX project name to "WeBoosta". Redraft a mock data.
+
+diff --git a/frontend/app/globals.css b/frontend/app/globals.css
+index edb7aeb..b41c4a4 100644
+--- a/frontend/app/globals.css
++++ b/frontend/app/globals.css
+@@ -2,11 +2,11 @@
+ @config "../tailwind.config.ts";
+ 
+ @theme {
+-  --color-primary: #1C1917;
+-  --color-secondary: #44403C;
++  --color-primary: #1E3A8A;
++  --color-secondary: #475569;
+   --color-accent: #CA8A04;
+-  --color-background: #FAFAF9;
+-  --color-text: #0C0A09;
++  --color-background: #F8FAFC;
++  --color-text: #0F172A;
+ 
+   --font-heading: var(--font-heading);
+   --font-body: var(--font-body);
+
+commit 28ead4cf629bbaa719d225e2d5ea7998eec8644f
+Author: Shariq Nauman <snau0005@student.monash.edu>
+Date:   Wed Apr 22 00:53:11 2026 +0800
+
+    refactor: Moved the frontend logic into one folder 'frontend'
+
+diff --git a/frontend/app/globals.css b/frontend/app/globals.css
+new file mode 100644
+index 0000000..edb7aeb
+--- /dev/null
++++ b/frontend/app/globals.css
+@@ -0,0 +1,60 @@
++@import "tailwindcss";
++@config "../tailwind.config.ts";
++
++@theme {
++  --color-primary: #1C1917;
++  --color-secondary: #44403C;
++  --color-accent: #CA8A04;
++  --color-background: #FAFAF9;
++  --color-text: #0C0A09;
++
++  --font-heading: var(--font-heading);
++  --font-body: var(--font-body);
++}
++
++@layer base {
++  body {
++    @apply bg-background text-text selection:bg-accent/30 font-body;
++  }
++}
++
++@layer components {
++  .btn-primary {
++    @apply bg-accent text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 cursor-pointer hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden;
++  }
++
++  .btn-primary::after {
++    content: '';
++    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full;
++    animation: shimmer 3s infinite;
++  }
++
++  @keyframes shimmer {
++    100% { transform: translateX(100%); }
++  }
++
++  .btn-secondary {
++    @apply bg-transparent text-primary border-2 border-primary px-6 py-3 rounded-lg font-semibold transition-all duration-200 cursor-pointer hover:bg-primary/5 hover:-translate-y-0.5 active:translate-y-0;
++  }
++
++  .glass-card {
++    @apply bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg;
++  }
++
++  .glass-panel {
++    @apply bg-primary/95 backdrop-blur-xl border-l border-white/10 shadow-2xl;
++  }
++}
++
++/* Custom scrollbar */
++::-webkit-scrollbar {
++  width: 8px;
++}
++
++::-webkit-scrollbar-track {
++  @apply bg-background;
++}
++
++::-webkit-scrollbar-thumb {
++  @apply bg-secondary/20 rounded-full hover:bg-secondary/40;
++}
