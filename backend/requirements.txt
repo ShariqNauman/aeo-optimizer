@@ -6,3 +6,7 @@ pydantic
 ddgs
 firecrawl-py
 langchain-openai
+tavily-python
+fastapi
+uvicorn
+supabase

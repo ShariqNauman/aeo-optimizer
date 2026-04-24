@@ -16,11 +16,11 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
 
   const breakdown = content.breakdown || {};
   const radarData = [
-    { criterion: "Relevance", score: breakdown.relevance || 18, fullMark: 20 },
-    { criterion: "Completeness", score: breakdown.completeness || 19, fullMark: 20 },
-    { criterion: "Trust", score: breakdown.trust_signals || 12, fullMark: 20 },
-    { criterion: "Value", score: breakdown.value_proposition || 10, fullMark: 20 },
-    { criterion: "Structure", score: breakdown.structured_data_quality || 8, fullMark: 20 },
+    { criterion: "Relevance", score: breakdown.relevance || 0, fullMark: 20 },
+    { criterion: "Completeness", score: breakdown.completeness || 0, fullMark: 20 },
+    { criterion: "Trust", score: breakdown.trust_signals || 0, fullMark: 20 },
+    { criterion: "Value", score: breakdown.value_proposition || 0, fullMark: 20 },
+    { criterion: "Structure", score: breakdown.structured_data_quality || 0, fullMark: 20 },
   ];
 
   const handleSaveToDatabase = () => {
@@ -30,9 +30,9 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       date: new Date().toISOString().split('T')[0],
       query: query || "Custom Discovery Session",
       url: hotel || "https://example.com",
-      baseline: content.finalScore - content.delta || 48,
-      optimized: content.finalScore || 74,
-      delta: content.delta ? `+${content.delta}` : "+26",
+      baseline: (content.finalScore || 0) - (content.delta || 0),
+      optimized: content.finalScore || 0,
+      delta: content.delta ? `+${content.delta}` : "+0",
       reasoning: content.resim_feedback || content.status || "Optimization complete."
     });
 

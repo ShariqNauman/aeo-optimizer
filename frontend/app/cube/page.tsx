@@ -54,6 +54,10 @@ export default function CubePage() {
       const ws = simulatePipeline(query, hotel, (stageData) => {
         // Update global store directly
         addStage(stageData);
+        
+        // Auto-snap to the new stage as it arrives
+        setSelectedStage(stageData.stage);
+        
         if (stageData.stage === "result") setIsSimulating(false);
       });
 
@@ -63,7 +67,7 @@ export default function CubePage() {
         }
       };
     }
-  }, [query, hotel, stages, addStage, _hasHydrated]);
+  }, [query, hotel, addStage, _hasHydrated]);
 
   const handleFaceClick = (stage: Stage) => {
     setSelectedStage(stage);

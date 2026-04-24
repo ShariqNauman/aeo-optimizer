@@ -1,18 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecordsTable } from "@/components/ui/RecordsTable";
 import { RecordsGrid } from "@/components/ui/RecordsGrid";
-import { Download, Database, Filter, LayoutGrid, List, Search, X } from "lucide-react";
+import { Download, Database, Filter, LayoutGrid, List, Search, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { useSessionStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
+import { RecordEntry } from "@/lib/mockRecords";
 
 export default function RecordsPage() {
-  const { records } = useSessionStore();
+  const [records, setRecords] = useState<RecordEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('optimization_records')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          const formatted: RecordEntry[] = data.map((r: any) => ({
+            id: r.id,
+            date: new Date(r.created_at).toLocaleDateString(),
+            query: r.query,
+            url: r.hotel_url,
+            baseline: r.baseline_score,
+            optimized: r.optimized_score,
+            delta: (r.delta >= 0 ? "+" : "") + r.delta,
+            reasoning: r.reasoning
+          }));
+          setRecords(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to fetch records:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, []);
 
   const filteredRecords = records.filter(record => 
     record.query.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -160,7 +195,12 @@ export default function RecordsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {viewMode === "list" ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-40 space-y-4">
+              <Loader2 className="w-10 h-10 text-accent animate-spin" />
+              <p className="text-[10px] uppercase tracking-[0.4em] font-black font-mono text-secondary/40">Synchronizing_Archive...</p>
+            </div>
+          ) : viewMode === "list" ? (
             <div className="bg-white border border-[#E7E5E4] rounded-[2.5rem] overflow-hidden shadow-xl shadow-[#1C1917]/5">
               <RecordsTable records={filteredRecords} />
             </div>

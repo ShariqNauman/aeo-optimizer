@@ -34,15 +34,15 @@ export default function Home() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent font-semibold text-sm uppercase tracking-widest mb-4">
             <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center text-white text-[10px] font-bold">W</div>
-            WeBoosta AI Engine
+            WeBoosta Automation Suite
           </div>
           <h1 className="font-heading text-5xl md:text-7xl font-bold text-primary max-w-4xl leading-tight">
             Visible to Agents, <br />
             <span className="text-accent italic">Not Just Humans.</span>
           </h1>
           <p className="font-body text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
-            <span className="font-bold text-primary">WeBoosta</span> simulates AI decision-making to reveal how travel agents see your hotel, 
-            providing actionable signals to win more bookings.
+            <span className="font-bold text-primary">WeBoosta</span> automates the discovery and optimization of your hotel for the agentic economy, 
+            simulating AI decisions to instantly refine your digital presence for autonomous agents.
           </p>
         </motion.div>
 
@@ -62,9 +62,9 @@ export default function Home() {
             <div className="p-3 rounded-2xl bg-white shadow-sm border border-secondary/10">
               <ShieldCheck className="w-6 h-6 text-accent" />
             </div>
-            <h3 className="font-heading text-lg font-bold">Decision Fidelity</h3>
+            <h3 className="font-heading text-lg font-bold">Automated Simulation</h3>
             <p className="text-sm text-secondary">
-              Simulate actual AI agent logic using Z.AI GLM reasoning.
+              Fully autonomous reasoning simulations using Z.AI GLM pipelines.
             </p>
           </div>
           <div className="flex flex-col items-center text-center space-y-3">
@@ -80,9 +80,9 @@ export default function Home() {
             <div className="p-3 rounded-2xl bg-white shadow-sm border border-secondary/10">
               <Zap className="w-6 h-6 text-accent" />
             </div>
-            <h3 className="font-heading text-lg font-bold">Instant Optimization</h3>
+            <h3 className="font-heading text-lg font-bold">Autonomous Optimization</h3>
             <p className="text-sm text-secondary">
-              Auto-generate agent-readable content in seconds.
+              Self-correcting content refinement loops executed in seconds.
             </p>
           </div>
         </motion.div>

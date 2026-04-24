@@ -34,20 +34,48 @@ class HotelProfile(BaseModel):
     contact_info: Optional[str] = Field(default="", description="Phone, email, or website if available")
     structured_data_available: bool = Field(default=False, description="Whether the hotel has schema.org markup")
 
-    @field_validator("contact_info", mode="before")
+    @field_validator("star_rating", mode="before")
     @classmethod
-    def coerce_contact_info(cls, v):
-        """Z.AI may return contact_info as a dict — flatten it to a string."""
-        if isinstance(v, dict):
-            parts = [f"{k}: {val}" for k, val in v.items() if val]
-            return " | ".join(parts)
-        return v or ""
+    def coerce_star_rating(cls, v):
+        """Handle None or invalid star rating."""
+        if v is None: return 0.0
+        try: return float(v)
+        except (ValueError, TypeError): return 0.0
 
-    @field_validator("price_range", "review_summary", mode="before")
+    @field_validator("description", "contact_info", "price_range", "review_summary", mode="before")
     @classmethod
-    def coerce_none_to_str(cls, v):
-        """Replace null fields with a sensible default string."""
-        return v if isinstance(v, str) else (str(v) if v is not None else "")
+    def coerce_to_str(cls, v):
+        """Ensure field is a string and handle None."""
+        if v is None: return ""
+        if isinstance(v, dict):
+            return " | ".join(f"{k}: {val}" for k, val in v.items() if val)
+        return str(v)
+
+    @field_validator("amenities", "room_types", "dining_options", "unique_selling_points", "nearby_attractions", mode="before")
+    @classmethod
+    def flatten_to_strings(cls, v):
+        """
+        Z.AI often returns a list of objects instead of strings for these fields.
+        Flatten them to strings: {'name': 'X', 'details': 'Y'} -> 'X: Y'
+        """
+        if not isinstance(v, list):
+            return [str(v)] if v else []
+            
+        flattened = []
+        for item in v:
+            if isinstance(item, dict):
+                # Try to find a name or title, then append other fields
+                name = item.pop('name', item.pop('title', ''))
+                details = " | ".join(f"{k}: {val}" for k, val in item.items() if val)
+                if name and details:
+                    flattened.append(f"{name} ({details})")
+                elif name:
+                    flattened.append(str(name))
+                elif details:
+                    flattened.append(details)
+            else:
+                flattened.append(str(item))
+        return flattened
 
 
 # Maximum characters of raw web content sent to the LLM.
@@ -117,6 +145,10 @@ Respond with ONLY the JSON object."""
     
     try:
         profile = structured_llm.invoke(prompt)
+        
+        if profile is None:
+            raise ValueError("LLM returned None for structured output.")
+            
         profile_dict = profile.model_dump()
         
         # Print a summary

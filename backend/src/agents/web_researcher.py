@@ -13,6 +13,7 @@ Returns raw text content + list of crawled source URLs.
 import os
 import re
 from firecrawl import FirecrawlApp
+from tavily import TavilyClient
 from src.state import AEOState
 
 
@@ -43,17 +44,39 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str]]:
         scraped_pages = []
         source_urls = []
         
-        # In firecrawl SDK v2, job.data contains a list of Document objects
-        if hasattr(job, 'data') and job.data:
-            for doc in job.data:
-                page_url = getattr(doc.metadata, 'source_url', url) if hasattr(doc, 'metadata') else url
-                title = getattr(doc.metadata, 'title', page_url) if hasattr(doc, 'metadata') else page_url
-                
-                # Extract markdown from Document object
-                content = getattr(doc, 'markdown', "")
-                if not content:
-                    content = str(doc)
+        # Firecrawl SDK can return either a dictionary or an object with a 'data' attribute
+        data = []
+        if hasattr(job, 'data'):
+            data = job.data
+        elif isinstance(job, dict):
+            data = job.get('data', [])
+            
+        if data:
+            for doc in data:
+                if doc is None:
+                    continue
                     
+                # Handle both Document objects and dictionaries
+                if isinstance(doc, dict):
+                    metadata = doc.get('metadata') or {}
+                    content = doc.get('markdown') or doc.get('content') or ""
+                    page_url = metadata.get('source_url') or metadata.get('url') or url
+                    title = metadata.get('title') or page_url
+                else:
+                    metadata = getattr(doc, 'metadata', {}) or {}
+                    content = getattr(doc, 'markdown', "") or getattr(doc, 'content', "") or ""
+                    if not content:
+                        content = str(doc)
+                    page_url = getattr(metadata, 'source_url', url) if hasattr(metadata, 'source_url') else url
+                    if page_url is None: page_url = url
+                    title = getattr(metadata, 'title', page_url) if hasattr(metadata, 'title') else page_url
+                    if title is None: title = page_url
+                    
+                # Ensure they are strings for safety
+                content = str(content)
+                title = str(title)
+                page_url = str(page_url)
+                
                 # Clean up excessive newlines
                 content = re.sub(r'\n{3,}', '\n\n', content)
                 
@@ -69,13 +92,46 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str]]:
                 source_urls.append(page_url)
                 print(f"   Crawled: {title[:60]}...")
         else:
-            print("   [Warning] No pages crawled or empty data returned.")
+            print(f"   [Warning] No pages crawled or empty data returned. Job response: {type(job)}")
             
         return scraped_pages, source_urls
         
     except Exception as e:
         print(f"   [Error] Failed to crawl {url}: {e}")
-        return [{"url": url, "title": "Error", "snippet": "", "content": f"[Failed to crawl: {e}]"}], []
+        return [], []
+
+
+def search_hotel_info(url: str) -> tuple[list[dict], list[str]]:
+    """
+    Fallback: Use Tavily search to find information about the hotel if crawling fails.
+    """
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return [], []
+        
+    try:
+        client = TavilyClient(api_key=api_key)
+        print(f"   [Fallback] Searching for info about {url} using Tavily...")
+        
+        search_query = f"detailed information, amenities, room types, and dining for hotel: {url}"
+        results = client.search(query=search_query, search_depth="advanced", max_results=5)
+        
+        scraped_pages = []
+        source_urls = []
+        
+        for res in results.get('results', []):
+            scraped_pages.append({
+                "url": res.get('url'),
+                "title": res.get('title'),
+                "snippet": res.get('content'),
+                "content": res.get('content'),
+            })
+            source_urls.append(res.get('url'))
+            
+        return scraped_pages, source_urls
+    except Exception as e:
+        print(f"   [Error] Fallback search failed: {e}")
+        return [], []
 
 
 def web_researcher(state: AEOState) -> dict:
@@ -99,8 +155,20 @@ def web_researcher(state: AEOState) -> dict:
     print(f"   Mode: Website Crawl")
     scraped_pages, source_urls = crawl_hotel_site(hotel_url)
     
+    # ── Fallback if crawl failed ──
     if not scraped_pages:
-        print("   [Warning] No results found from crawl")
+        print("   [Warning] Crawl returned no data. Initiating fallback search...")
+        scraped_pages, source_urls = search_hotel_info(hotel_url)
+        
+    if not scraped_pages:
+        print("   [Critical] No data found for this hotel after both crawl and search.")
+        # Return a dummy entry so the pipeline doesn't crash
+        scraped_pages = [{
+            "url": hotel_url,
+            "title": "Information Not Found",
+            "snippet": "We could not retrieve detailed information from the hotel website.",
+            "content": f"The hotel website at {hotel_url} could not be analyzed. Please check the URL or try another hotel."
+        }]
     
     print(f"   Found {len(scraped_pages)} source pages")
     

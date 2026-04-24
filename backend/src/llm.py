@@ -17,13 +17,14 @@ Use get_structured_llm(schema) wherever you need structured output.
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Load environment variables from .env file
 load_dotenv()
 
-_API_KEY = os.getenv("Z_AI_API_KEY", "sk-2ea745196c73bdf66b58aa75eb61dc92f7ecdfd97b988390")
-_BASE_URL = os.getenv("Z_AI_BASE_URL", "https://api.ilmu.ai/v1")
-_MODEL = "ilmu-glm-5.1"
+_API_KEY = os.getenv("GOOGLE_API_KEY")
+_BASE_URL = os.getenv("Z_AI_BASE_URL")
+_MODEL = "gemini-3.1-pro-preview"
 
 
 def get_llm() -> ChatOpenAI:
@@ -31,10 +32,9 @@ def get_llm() -> ChatOpenAI:
     Returns a plain (non-structured) ChatOpenAI LLM instance configured
     for the Z.AI endpoint.
     """
-    return ChatOpenAI(
+    return ChatGoogleGenerativeAI(
         model=_MODEL,
         api_key=_API_KEY,
-        base_url=_BASE_URL,
         temperature=0.0,
     )
 
@@ -57,23 +57,24 @@ def get_structured_llm(schema):
 
     llm = get_llm()
 
-    def _parse(response) -> schema:
-        text = response.content.strip()
+    # def _parse(response) -> schema:
+    #     text = response.content.strip()
 
-        # Debug: print what the model actually returned
-        if not text:
-            raise ValueError(
-                f"Z.AI returned an empty response for schema '{schema.__name__}'. "
-                "The prompt may be too long or the model timed out."
-            )
-        print(f"   [LLM raw response ({len(text)} chars)]: {text[:120]}...")
+    #     # Debug: print what the model actually returned
+    #     if not text:
+    #         raise ValueError(
+    #             f"Z.AI returned an empty response for schema '{schema.__name__}'. "
+    #             "The prompt may be too long or the model timed out."
+    #         )
+    #     print(f"   [LLM raw response ({len(text)} chars)]: {text[:120]}...")
 
-        # Strip ALL markdown code fences (handles ```json, ```JSON, ``` etc.)
-        text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
-        text = re.sub(r"\s*```+\s*$", "", text.strip())
-        text = text.strip()
+    #     # Strip ALL markdown code fences (handles ```json, ```JSON, ``` etc.)
+    #     text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
+    #     text = re.sub(r"\s*```+\s*$", "", text.strip())
+    #     text = text.strip()
 
-        data = json.loads(text)
-        return schema(**data)
+    #     data = json.loads(text)
+    #     return schema(**data)
 
-    return llm | RunnableLambda(_parse)
+    # return llm | RunnableLambda(_parse)
+    return llm.with_structured_output(schema)

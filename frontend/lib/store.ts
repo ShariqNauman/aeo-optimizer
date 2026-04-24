@@ -23,7 +23,7 @@ export const useSessionStore = create<SessionState>()(
       query: "",
       hotelUrl: "",
       stages: {},
-      records: mockRecords, // Initialize with default mock data
+      records: [], // Always start empty, fetched from Supabase on demand
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       setSession: (query, hotelUrl) => set((state) => {
@@ -34,16 +34,19 @@ export const useSessionStore = create<SessionState>()(
       addStage: (stageData) => set((state) => ({ 
         stages: { ...state.stages, [stageData.stage]: stageData } 
       })),
-      addRecord: (record) => set((state) => ({
-        records: [
-          { ...record, id: Math.max(0, ...state.records.map(r => r.id)) + 1 },
-          ...state.records
-        ]
-      })),
+      addRecord: (record) => {
+        // Records are now saved to Supabase via the backend
+        console.log("Record archived to cloud:", record);
+      },
       clearSession: () => set({ query: "", hotelUrl: "", stages: {} }),
     }),
     {
       name: "aeo-session-storage",
+      partialize: (state) => ({ 
+        query: state.query, 
+        hotelUrl: state.hotelUrl,
+        stages: state.stages
+      }), // Exclude records from local storage persistence
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       }

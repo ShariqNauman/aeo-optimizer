@@ -34,19 +34,36 @@ export const simulatePipeline = (
 
       let stageData: StageData | null = null;
 
-      if (agentName === "data_aggregation") {
+      if (agentName === "web_researcher") {
         stageData = {
           stage: "original",
-          title: "Original Profile",
-          preview: "Raw Hotel Data Ingested",
+          title: "Web Research",
+          preview: `Found ${data.sources?.length || 0} credible sources.`,
           details: {
             query,
             hotel,
             content: {
-              description:
-                data.aggregated_profile?.description || "Ingested data...",
-              amenities: data.aggregated_profile?.amenities || [],
-              price: "N/A",
+              description: "Researching property across the web...",
+              sources: data.sources || [],
+            },
+          },
+        };
+      } else if (agentName === "data_aggregation") {
+        const profile = data.aggregated_profile || {};
+        stageData = {
+          stage: "original",
+          title: "Original Profile",
+          preview: profile.name ? `${profile.name} ingested.` : "Raw Hotel Data Ingested",
+          details: {
+            query,
+            hotel,
+            content: {
+              description: profile.description || "Ingested data...",
+              amenities: profile.amenities || [],
+              room_types: profile.room_types || [],
+              dining_options: profile.dining_options || [],
+              unique_selling_points: profile.unique_selling_points || [],
+              price: profile.price_range || "N/A",
             },
           },
         };
@@ -79,18 +96,19 @@ export const simulatePipeline = (
           },
         };
       } else if (agentName === "optimizer") {
+        const opt = data.optimized_profile || {};
         stageData = {
           stage: "optimization",
           title: "Content Optimization",
-          preview: "Profile Updated",
+          preview: "Profile Updated & Enhanced",
           details: {
             query,
             hotel,
-            isApproved: false,
+            isApproved: true,
             content: {
-              optimizedProfile: data.optimized_profile || {},
-              improvedDescription: data.optimized_profile?.description || "",
-              improvements: data.optimized_profile?.unique_selling_points || [],
+              optimizedProfile: opt,
+              improvedDescription: opt.description || "",
+              improvements: opt.unique_selling_points || [],
             },
           },
         };
@@ -119,7 +137,7 @@ export const simulatePipeline = (
             content: {
               finalScore: data.resim_score,
               delta: data.score_delta,
-              status: "Ready for deployment",
+              status: data.resim_feedback || "Ready for deployment",
             },
           },
         };
@@ -128,6 +146,22 @@ export const simulatePipeline = (
       if (stageData) {
         onStageComplete(stageData);
       }
+    } else if (response.type === "error") {
+      console.error("Pipeline Error:", response.message);
+      // Create an error stage to show in the UI
+      onStageComplete({
+        stage: "original",
+        title: "Error",
+        preview: "Pipeline Execution Failed",
+        details: {
+          query,
+          hotel,
+          content: {
+            description: `[Error] ${response.message}`,
+            status: "Error",
+          }
+        }
+      });
     }
   };
 

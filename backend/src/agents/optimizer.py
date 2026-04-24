@@ -65,6 +65,10 @@ Respond with ONLY the JSON object."""
     
     try:
         optimized = structured_llm.invoke(prompt)
+        
+        if optimized is None:
+            raise ValueError("LLM returned None for optimized structured output.")
+            
         print("   Optimization complete. Profile enhanced.")
         return {
             "optimized_profile": optimized.model_dump(),

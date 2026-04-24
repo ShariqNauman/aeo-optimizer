@@ -20,7 +20,7 @@ import {
 import { Button } from "./Button";
 import { useSessionStore } from "@/lib/store";
 
-export type ViewState = "INITIAL" | "SEARCHING" | "RESULTS" | "INVESTIGATION";
+export type ViewState = "INITIAL" | "SEARCHING" | "RESULTS" | "INVESTIGATION" | "TERMINATED";
 
 interface DiscoveryChatProps {
   onDiscoverWhy: (query: string, hotelUrl: string) => void;
@@ -33,6 +33,9 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
   const [hotelUrl, setHotelUrl] = useState("");
   const [statusIndex, setStatusIndex] = useState(0);
   const [submittedQuery, setSubmittedQuery] = useState("");
+  const [hotels, setHotels] = useState<{name: string, url: string}[]>([]);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const setSession = useSessionStore((state) => state.setSession);
   const clearSession = useSessionStore((state) => state.clearSession);
   
@@ -49,31 +52,53 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
     if (viewState === "SEARCHING") {
       interval = setInterval(() => {
         setStatusIndex((prev) => {
+          // Stay on the last message if still searching
           if (prev < statusMessages.length - 1) return prev + 1;
           return prev;
         });
-      }, 1500);
+      }, 2000);
     }
     return () => { if (interval) clearInterval(interval); };
   }, [viewState, statusMessages.length]);
 
-  // Handle transition to RESULTS separately to avoid updating parent state during render/state-update cycles
-  useEffect(() => {
-    if (viewState === "SEARCHING" && statusIndex === statusMessages.length - 1) {
-      const timeout = setTimeout(() => {
-        setViewState("RESULTS");
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [viewState, statusIndex, setViewState, statusMessages.length]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    
     setSubmittedQuery(query);
-    setSession(query, ""); // Store initial query
+    setSession(query, ""); 
     setViewState("SEARCHING");
     setStatusIndex(0);
+    setIsError(false);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/search_hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query }),
+      });
+
+      if (!response.ok) throw new Error("Search failed");
+
+      const data = await response.json();
+      
+      if (data.is_valid === false) {
+        setHotels([]);
+        setIsError(true);
+        setErrorMessage(data.error_message || "Invalid query detected.");
+      } else {
+        setHotels(data.hotels);
+        setIsError(false);
+        setErrorMessage(null);
+      }
+      setViewState("RESULTS");
+    } catch (error) {
+      console.error("Discovery error:", error);
+      setIsError(true);
+      // Fallback to initial if failed? Or stay on searching with error?
+      // Let's go to results but show error message
+      setViewState("RESULTS");
+    }
   };
 
   const handleReset = () => {
@@ -82,14 +107,14 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
     setQuery("");
     setHotelUrl("");
     setSubmittedQuery("");
+    setHotels([]);
+    setErrorMessage(null);
   };
 
-  const mockHotels = [
-    { name: "Mandarin Oriental Kuala Lumpur", url: "https://www.mandarinoriental.com/en/kuala-lumpur/petronas-towers" },
-    { name: "Four Seasons Hotel Kuala Lumpur", url: "https://www.fourseasons.com/kualalumpur/" },
-    { name: "EQ Kuala Lumpur", url: "https://www.eqkualalumpur.com/" },
-    { name: "The Ritz-Carlton, Kuala Lumpur", url: "https://www.ritzcarlton.com/en/hotels/malaysia/kuala-lumpur" },
-  ];
+  const handleTerminate = () => {
+    clearSession();
+    setViewState("TERMINATED");
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 perspective-1000">
@@ -247,56 +272,112 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
                             >
                               <div className="space-y-4">
                                 <h3 className="text-accent text-[9px] uppercase tracking-[0.5em] font-black">Output_Stream:</h3>
-                                <p className="text-white/80 leading-relaxed font-body text-lg italic">
-                                  Retrieval complete. AI agentic pathways established for the following properties:
-                                </p>
+                                {isError ? (
+                                  <p className="text-red-400 leading-relaxed font-mono text-xs italic bg-red-500/10 p-4 border border-red-500/20 rounded-xl">
+                                    [Validation_Error]: {errorMessage || "Retrieval failure. Search API returned non-zero exit code."}
+                                  </p>
+                                ) : (
+                                  <p className="text-white/80 leading-relaxed font-body text-lg italic">
+                                    Retrieval complete. AI agentic pathways established for the following properties:
+                                  </p>
+                                )}
                               </div>
 
                               <div className="grid gap-4">
-                                {mockHotels.map((hotel, i) => (
-                                  <motion.a
-                                    key={hotel.name}
-                                    href={hotel.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.4 + i * 0.1 }}
-                                    className="flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-lg"
-                                  >
-                                    <div className="flex items-center gap-6">
-                                      <div className="w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center group-hover:bg-accent/20 transition-all group-hover:scale-110">
-                                        <Hotel className="w-5 h-5 text-accent" />
+                                {hotels.length > 0 ? (
+                                  hotels.map((hotel, i) => (
+                                    <motion.a
+                                      key={`${hotel.name}-${i}`}
+                                      href={hotel.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.4 + i * 0.1 }}
+                                      className="flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-lg"
+                                    >
+                                      <div className="flex items-center gap-6">
+                                        <div className="w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center group-hover:bg-accent/20 transition-all group-hover:scale-110">
+                                          <Hotel className="w-5 h-5 text-accent" />
+                                        </div>
+                                        <span className="text-white text-lg font-medium tracking-tight group-hover:text-accent transition-colors">{hotel.name}</span>
                                       </div>
-                                      <span className="text-white text-lg font-medium tracking-tight group-hover:text-accent transition-colors">{hotel.name}</span>
-                                    </div>
-                                    <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
-                                  </motion.a>
-                                ))}
+                                      <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                    </motion.a>
+                                  ))
+                                ) : !isError && (
+                                  <p className="text-white/20 font-mono text-[10px] text-center py-10 uppercase tracking-[0.3em]">
+                                    No candidates discovered in current sector.
+                                  </p>
+                                )}
                               </div>
 
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 1 }}
-                                className="pt-8 flex flex-col sm:flex-row gap-4"
+                              {!isError && (
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: 1 }}
+                                  className="pt-8 flex flex-col sm:flex-row gap-4"
+                                >
+                                  <Button
+                                    onClick={() => setViewState("INVESTIGATION")}
+                                    className="flex-1 py-8 bg-accent hover:bg-accent/90 text-white font-black tracking-[0.4em] uppercase text-xs group shadow-[0_0_40px_rgba(202,138,4,0.3)] border-none rounded-2xl"
+                                  >
+                                    Discover_Why
+                                    <Sparkles className="ml-3 w-5 h-5 group-hover:scale-125 transition-transform" />
+                                  </Button>
+                                  <Button
+                                    onClick={handleTerminate}
+                                    variant="outline"
+                                    className="flex-1 py-8 border-white/10 text-white/40 hover:text-white hover:bg-white/5 font-black tracking-[0.4em] uppercase text-xs rounded-2xl transition-all"
+                                  >
+                                    End_Discovery
+                                    <RefreshCw className="ml-3 w-4 h-4" />
+                                  </Button>
+                                </motion.div>
+                              )}
+
+                              {isError && (
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  className="pt-8 flex justify-center"
+                                >
+                                  <Button
+                                    onClick={handleReset}
+                                    variant="outline"
+                                    className="border-accent/20 text-accent hover:bg-accent/10 font-bold uppercase tracking-widest text-[10px] py-6 px-10 rounded-2xl"
+                                  >
+                                    Try Another Query
+                                  </Button>
+                                </motion.div>
+                              )}
+                            </motion.div>
+                          )}
+
+                          {viewState === "TERMINATED" && (
+                            <motion.div
+                              key="terminated-state"
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex flex-col items-center justify-center py-20 text-center space-y-6"
+                            >
+                              <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                <Bot className="w-10 h-10 text-white/20" />
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="text-white font-heading text-2xl font-bold uppercase tracking-widest">Session Terminated</h3>
+                                <p className="text-white/40 font-body text-sm max-w-xs mx-auto">
+                                  Agentic discovery protocol successfully closed. Thank you for using AEO Optimizer.
+                                </p>
+                              </div>
+                              <Button
+                                onClick={handleReset}
+                                variant="outline"
+                                className="mt-8 border-accent/20 text-accent hover:bg-accent/10 font-bold uppercase tracking-widest text-[10px]"
                               >
-                                <Button
-                                  onClick={() => setViewState("INVESTIGATION")}
-                                  className="flex-1 py-8 bg-accent hover:bg-accent/90 text-white font-black tracking-[0.4em] uppercase text-xs group shadow-[0_0_40px_rgba(202,138,4,0.3)] border-none rounded-2xl"
-                                >
-                                  Discover_Why
-                                  <Sparkles className="ml-3 w-5 h-5 group-hover:scale-125 transition-transform" />
-                                </Button>
-                                <Button
-                                  onClick={handleReset}
-                                  variant="outline"
-                                  className="flex-1 py-8 border-white/10 text-white/40 hover:text-white hover:bg-white/5 font-black tracking-[0.4em] uppercase text-xs rounded-2xl transition-all"
-                                >
-                                  End_Discovery
-                                  <RefreshCw className="ml-3 w-4 h-4" />
-                                </Button>
-                              </motion.div>
+                                Start New Session
+                              </Button>
                             </motion.div>
                           )}
 
