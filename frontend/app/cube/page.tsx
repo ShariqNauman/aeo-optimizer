@@ -13,6 +13,14 @@ import Link from "next/link";
 import { useSessionStore } from "@/lib/store";
 
 export default function CubePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader /></div>}>
+      <CubePageContent />
+    </Suspense>
+  );
+}
+
+function CubePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
