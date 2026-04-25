@@ -28,6 +28,12 @@ interface DiscoveryChatProps {
   setViewState: (state: ViewState) => void;
 }
 
+const MAX_QUERY_WORDS = 30;
+
+const getWordCount = (text: string) => {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+};
+
 const isValidUrl = (url: string) => {
   try {
     const pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
@@ -80,6 +86,12 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    
+    if (getWordCount(query) > MAX_QUERY_WORDS) {
+      setIsError(true);
+      setErrorMessage(`Query too long. Please keep it under ${MAX_QUERY_WORDS} words.`);
+      return;
+    }
     
     setSubmittedQuery(query);
     setSession(query, ""); 
@@ -234,17 +246,25 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
                       <ArrowRight className="w-6 h-6 text-white" />
                     </Button>
                   </div>
-                  <div className="mt-6 flex items-center justify-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
-                      <p className="text-accent/30 text-[9px] uppercase tracking-[0.4em] font-black font-mono">
-                        WEBOOSTA_v2.0
+                  <div className="mt-6 flex items-center justify-between px-2">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent/40" />
+                        <p className="text-accent/30 text-[9px] uppercase tracking-[0.4em] font-black font-mono">
+                          WEBOOSTA_v2.0
+                        </p>
+                      </div>
+                      <div className="w-1 h-1 rounded-full bg-white/5" />
+                      <p className="text-white/10 text-[9px] uppercase tracking-[0.4em] font-black font-mono">
+                        ENCRYPTED_FEED
                       </p>
                     </div>
-                    <div className="w-1 h-1 rounded-full bg-white/5" />
-                    <p className="text-white/10 text-[9px] uppercase tracking-[0.4em] font-black font-mono">
-                      ENCRYPTED_FEED
-                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <p className={`text-[9px] font-black font-mono uppercase tracking-[0.2em] ${getWordCount(query) > MAX_QUERY_WORDS ? 'text-red-500' : 'text-white/20'}`}>
+                        {getWordCount(query)} / {MAX_QUERY_WORDS} WORDS
+                      </p>
+                    </div>
                   </div>
                 </form>
               </motion.div>
