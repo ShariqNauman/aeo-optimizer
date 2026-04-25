@@ -28,21 +28,22 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
 
     try {
       // Get the final state stored by the WebSocket pipeline
-      const finalStateStr = typeof window !== "undefined" 
-        ? sessionStorage.getItem("pipeline_final_state") 
+      const finalStateStr = typeof window !== "undefined"
+        ? sessionStorage.getItem("pipeline_final_state")
         : null;
-      
+
       const finalState = finalStateStr ? JSON.parse(finalStateStr) : null;
 
       if (finalState) {
         // Call backend API to save to Supabase
-        const response = await fetch("http://127.0.0.1:8000/api/save_record", {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+        const response = await fetch(`${backendUrl}/api/save_record`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(finalState),
         });
         const result = await response.json();
-        
+
         if (result.success) {
           console.log("💾 [HITL] Record saved to Supabase. ID:", result.id);
         } else {
@@ -51,7 +52,7 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       } else {
         console.warn("⚠️ [HITL] No pipeline final state found in session.");
       }
-      
+
       // Also update local store for immediate UI feedback
       addRecord({
         date: new Date().toISOString().split('T')[0],
@@ -88,7 +89,7 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="text-right">
           <div className="space-y-1">
             <div className="text-[10px] uppercase tracking-widest font-bold text-accent">Status</div>
@@ -110,9 +111,8 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       <div className="pt-6">
         <Button
           onClick={handleSaveToDatabase}
-          className={`w-full py-6 text-lg group ${
-            isSaved ? "bg-green-600/20 border-green-600/40 text-green-500 cursor-default shadow-none" : "shadow-xl shadow-accent/10"
-          }`}
+          className={`w-full py-6 text-lg group ${isSaved ? "bg-green-600/20 border-green-600/40 text-green-500 cursor-default shadow-none" : "shadow-xl shadow-accent/10"
+            }`}
         >
           {isSaved ? (
             <span className="flex items-center gap-2">

@@ -64,7 +64,7 @@ export default function Home() {
             </div>
             <h3 className="font-heading text-lg font-bold">Automated Simulation</h3>
             <p className="text-sm text-secondary">
-              Fully autonomous reasoning simulations using Z.AI GLM pipelines.
+              Fully autonomous reasoning simulations using Google Gemini 3.1 pipelines.
             </p>
           </div>
           <div className="flex flex-col items-center text-center space-y-3">

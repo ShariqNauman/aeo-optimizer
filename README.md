@@ -24,13 +24,13 @@ WeBoosta's core reasoning and multi-agent orchestration are proudly powered by *
 
 ## 👥 Team UMami
 
-| Name | Role | University |
-| :--- | :--- | :--- |
-| **Leong Wui Yip** | Pitching Video (Director, Recording & Editing) | Monash University |
-| **Francis Paul Narcis** | Documentation (PRD & System Analysis) | Monash University |
-| **Muhammad Ahmad** | QA & Pitch Deck | Monash University |
-| **Shariq Nauman** | Backend Developer | Monash University |
-| **Lee Ping Xian** | UI/UX Designer & Workflow System Architect | Taylor's University |
+| Name                    | Role                                           | University          |
+| :---------------------- | :--------------------------------------------- | :------------------ |
+| **Leong Wui Yip**       | Pitching Video (Director, Recording & Editing) | Monash University   |
+| **Francis Paul Narcis** | Documentation (PRD & System Analysis)          | Monash University   |
+| **Muhammad Ahmad**      | QA & Pitch Deck                                | Monash University   |
+| **Shariq Nauman**       | Backend Developer                              | Monash University   |
+| **Lee Ping Xian**       | UI/UX Designer & Workflow System Architect     | Taylor's University |
 
 ---
 
