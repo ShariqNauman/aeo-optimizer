@@ -15,7 +15,7 @@ export const simulatePipeline = (
   }
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-  const wsUrl = backendUrl.replace(/^http/, "ws");
+  const wsUrl = backendUrl.replace("http", "ws");
   const ws = new WebSocket(`${wsUrl}/ws/optimize`);
 
   ws.onopen = () => {
