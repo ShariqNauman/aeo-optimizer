@@ -122,6 +122,19 @@ def data_aggregation(state: AEOState) -> dict:
     # Format the raw data into readable text
     raw_text = _format_raw_data(raw_data)
     
+    # Check if Firecrawl extracted structured data
+    extracted_data = raw_data.get("extracted_data", {})
+    extracted_context = ""
+    if extracted_data:
+        print(f"   Using Firecrawl extracted data as supplementary context")
+        extracted_lines = []
+        for key, value in extracted_data.items():
+            if isinstance(value, list):
+                extracted_lines.append(f"  {key}: {', '.join(str(v) for v in value)}")
+            elif value:
+                extracted_lines.append(f"  {key}: {value}")
+        extracted_context = "\n\nPRE-EXTRACTED STRUCTURED DATA (use this to supplement the raw data):\n" + "\n".join(extracted_lines)
+    
     # Build the prompt
     prompt = f"""You are a hotel data analyst. Extract a structured hotel profile from the web data below.
 Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
@@ -130,13 +143,16 @@ Hotel: {hotel_input}
 
 Raw Data (truncated):
 {raw_text}
+{extracted_context}
 
 JSON fields required: name, location, star_rating, description, amenities (list),
 room_types (list), dining_options (list), price_range, review_summary,
 unique_selling_points (list), nearby_attractions (list), contact_info,
 structured_data_available (bool).
 
-Be thorough — extract every amenity, room type, and dining option you can find.
+IMPORTANT: Be extremely thorough — extract EVERY amenity, room type, dining option,
+and facility mentioned across ALL source pages. Do not skip any data.
+If room types, dining options, or amenities are found on subpages, include them all.
 Respond with ONLY the JSON object."""
     
     # Use Gemini with built-in structured output

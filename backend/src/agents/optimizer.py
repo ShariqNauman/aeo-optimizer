@@ -44,9 +44,13 @@ IDENTIFIED GAPS TO FIX:
 """
     if validation_feedback and retry_count > 0:
         prompt += f"""
-PREVIOUS VALIDATION FAILED:
+PREVIOUS VALIDATION FEEDBACK:
 "{validation_feedback}"
-Please fix these specific issues in this attempt!
+
+IMPORTANT: If the validation failed because you added information that does NOT exist
+in the original profile, you MUST REMOVE those fabricated items in this attempt.
+It is better to leave a gap unaddressed than to invent information.
+Only use what the original profile provides. Do NOT add new items to pass validation.
 """
     prompt += """
 INSTRUCTIONS:

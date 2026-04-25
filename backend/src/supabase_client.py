@@ -16,29 +16,45 @@ if url and key:
     except Exception as e:
         print(f"   [Supabase] Failed to initialize client: {e}")
 
-def save_optimization_record(state: dict):
+def save_optimization_record(data: dict):
     """
-    Saves the final state of an optimization run to Supabase.
+    Saves an optimization record to Supabase.
+    Accepts either a pre-formatted record dict (from API endpoint)
+    or a raw pipeline state dict.
     """
     if not supabase:
         print("   [Supabase] Skip saving: Client not initialized")
-        return
+        return None
         
     try:
-        # Extract data from state
-        # Note: state keys match AEOState TypedDict
-        record = {
-            "query": state.get("traveller_query", ""),
-            "hotel_url": state.get("hotel_url", ""),
-            "hotel_name": state.get("aggregated_profile", {}).get("name", "Unknown"),
-            "baseline_score": state.get("evaluation_score", 0),
-            "optimized_score": state.get("resim_score", 0),
-            "delta": state.get("score_delta", 0),
-            "reasoning": state.get("resim_reasoning", ""),
-            "original_profile": state.get("aggregated_profile", {}),
-            "optimized_profile": state.get("optimized_profile", {}),
-            "sources": state.get("sources", [])
-        }
+        # If data already has 'query' key, it's a pre-formatted record from the API
+        if "query" in data:
+            record = {
+                "query": data.get("query", ""),
+                "hotel_url": data.get("hotel_url", ""),
+                "hotel_name": data.get("hotel_name", "Unknown"),
+                "baseline_score": data.get("baseline_score", 0),
+                "optimized_score": data.get("optimized_score", 0),
+                "delta": data.get("delta", 0),
+                "reasoning": data.get("reasoning", ""),
+                "original_profile": data.get("original_profile", {}),
+                "optimized_profile": data.get("optimized_profile", {}),
+                "sources": data.get("sources", [])
+            }
+        else:
+            # Legacy: raw pipeline state
+            record = {
+                "query": data.get("traveller_query", ""),
+                "hotel_url": data.get("hotel_url", ""),
+                "hotel_name": data.get("aggregated_profile", {}).get("name", "Unknown"),
+                "baseline_score": data.get("evaluation_score", 0),
+                "optimized_score": data.get("resim_score", 0),
+                "delta": data.get("score_delta", 0),
+                "reasoning": data.get("resim_reasoning", ""),
+                "original_profile": data.get("aggregated_profile", {}),
+                "optimized_profile": data.get("optimized_profile", {}),
+                "sources": data.get("sources", [])
+            }
         
         print(f"   [Supabase] Archiving record for {record['hotel_name']}...")
         result = supabase.table("optimization_records").insert(record).execute()

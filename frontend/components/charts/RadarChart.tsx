@@ -36,9 +36,10 @@ export const RadarChart = ({ data }: RadarChartProps) => {
           <Radar
             name="Score"
             dataKey="score"
-            stroke="#CA8A04"
-            fill="#CA8A04"
-            fillOpacity={0.6}
+            stroke="#FACC15"
+            fill="#FACC15"
+            fillOpacity={0.7}
+            className="drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]"
           />
         </RechartsRadar>
       </ResponsiveContainer>

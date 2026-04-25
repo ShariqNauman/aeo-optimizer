@@ -44,28 +44,52 @@ def validator(state: AEOState) -> dict:
         print("   No optimization needed or available. Passing automatically.")
         return {"validation_passed": True, "validation_feedback": "Auto-pass (no gaps/optimization)"}
         
-    prompt = f"""You are a QA Validator for hotel content optimization.
+    prompt = f"""You are a strict QA Validator for hotel content optimization.
+Your PRIMARY job is to detect fabricated or hallucinated information.
 Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
 
-ORIGINAL PROFILE:
+ORIGINAL PROFILE (source of truth):
 {_format_profile(original)}
 
 GAPS THAT NEEDED FIXING:
 {_format_gaps(gaps)}
 
-NEW OPTIMIZED PROFILE:
+NEW OPTIMIZED PROFILE (to validate):
 {_format_profile(optimized)}
 
-EVALUATION CRITERIA:
-1. Were all the gaps addressed in the new profile?
-2. Did the optimizer hallucinate anything physically impossible (e.g. beach in city centre)?
-   Minor elaborations on existing amenities are acceptable.
-3. Is the tone natural and professional?
+EVALUATION CRITERIA (in order of importance):
+
+1. FACTUAL INTEGRITY (most critical):
+   - Compare EVERY amenity, room type, dining option, and service in the optimized
+     profile against the original profile.
+   - If the optimized profile contains items that DO NOT exist ANYWHERE in the original
+     profile, mark hallucinations_detected as TRUE and set passed to FALSE.
+   - Rewording, restructuring, and emphasizing existing items is acceptable.
+   - Adding entirely NEW amenities, programs, services, or features that have NO basis
+     in the original data is NOT acceptable and counts as hallucination.
+   Examples of hallucination:
+     - Original has "Pool" → Optimized says "Infinity Pool with Kids Area" (acceptable reword)
+     - Original has NO kids program → Optimized adds "Little Fans Kids Club" (HALLUCINATION)
+     - Original has "Restaurant A" → Optimized says "Restaurant A (Family Dining)" (acceptable)
+     - Original has NO specific restaurant → Optimized invents one (HALLUCINATION)
+
+2. GAP RESOLUTION:
+   - It is ACCEPTABLE if some gaps could not be fully addressed because the original
+     data simply doesn't support it.
+   - A profile that honestly acknowledges limitations is BETTER than one that fabricates
+     information to fill gaps.
+   - Set gaps_addressed to true if the optimizer made a reasonable best-effort using
+     only the available data.
+
+3. TONE: Is the content natural and professional?
+
+CRITICAL RULE: PASS profiles that faithfully represent the original data, even if not
+all gaps are addressed. FAIL profiles that fabricate information to fill gaps.
 
 Required JSON format:
 {{
   "passed": <true|false>,
-  "feedback": "<detailed explanation>",
+  "feedback": "<detailed explanation — list any specific fabricated items found>",
   "hallucinations_detected": <true|false>,
   "gaps_addressed": <true|false>
 }}

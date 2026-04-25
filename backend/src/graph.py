@@ -63,19 +63,29 @@ def human_approval(state: AEOState) -> dict:
 def should_reoptimize(state: AEOState) -> str:
     """
     Conditional logic after validation.
-    If validation passed or max retries reached, move to resimulator.
-    Otherwise, route back to optimizer.
+    If validation passed, hallucination detected, or max retries reached → move to resimulator.
+    Otherwise, route back to optimizer for ONE retry only.
     """
     passed = state.get("validation_passed", True)
     retry_count = state.get("retry_count", 0)
+    feedback = state.get("validation_feedback", "").lower()
     
-    if passed or retry_count >= 2:
-        if not passed:
-            print("   [Warning] Validation failed but max retries reached. Proceeding.")
+    # If validation passed, proceed normally
+    if passed:
         return "resimulator"
-    else:
-        print("   [Routing] Validation failed. Sending back to Optimizer.")
-        return "optimizer"
+    
+    # If hallucination was detected, do NOT retry — retrying makes it worse
+    if "hallucination" in feedback or "fabricat" in feedback or "invented" in feedback or "does not exist" in feedback:
+        print("   [Routing] Hallucination detected in feedback. Skipping retry to prevent escalation.")
+        return "resimulator"
+    
+    # Max 1 retry (reduced from 2) to limit fabrication opportunity
+    if retry_count >= 1:
+        print("   [Warning] Max retries (1) reached. Proceeding with current profile.")
+        return "resimulator"
+    
+    print("   [Routing] Validation failed (no hallucination). Sending back to Optimizer for 1 retry.")
+    return "optimizer"
 
 
 # ── Build the Graph ──────────────────────────────────────────────────

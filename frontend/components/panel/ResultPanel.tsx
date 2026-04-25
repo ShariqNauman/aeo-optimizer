@@ -23,21 +23,54 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
     { criterion: "Structure", score: breakdown.structured_data_quality || 0, fullMark: 20 },
   ];
 
-  const handleSaveToDatabase = () => {
+  const handleSaveToDatabase = async () => {
     if (isSaved) return;
 
-    addRecord({
-      date: new Date().toISOString().split('T')[0],
-      query: query || "Custom Discovery Session",
-      url: hotel || "https://example.com",
-      baseline: (content.finalScore || 0) - (content.delta || 0),
-      optimized: content.finalScore || 0,
-      delta: content.delta ? `+${content.delta}` : "+0",
-      reasoning: content.resim_feedback || content.status || "Optimization complete."
-    });
+    try {
+      // Get the final state stored by the WebSocket pipeline
+      const finalStateStr = typeof window !== "undefined" 
+        ? sessionStorage.getItem("pipeline_final_state") 
+        : null;
+      
+      const finalState = finalStateStr ? JSON.parse(finalStateStr) : null;
 
-    setIsSaved(true);
-    console.log("💾 [HITL] Session Saved to Historical Archive");
+      if (finalState) {
+        // Call backend API to save to Supabase
+        const response = await fetch("http://127.0.0.1:8000/api/save_record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalState),
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log("💾 [HITL] Record saved to Supabase. ID:", result.id);
+        } else {
+          console.warn("⚠️ [HITL] Backend save failed:", result.error);
+        }
+      } else {
+        console.warn("⚠️ [HITL] No pipeline final state found in session.");
+      }
+      
+      // Also update local store for immediate UI feedback
+      addRecord({
+        date: new Date().toISOString().split('T')[0],
+        query: query || "Custom Discovery Session",
+        url: hotel || "https://example.com",
+        baseline: (content.finalScore || 0) - (content.delta || 0),
+        optimized: content.finalScore || 0,
+        delta: content.delta ? `+${content.delta}` : "+0",
+        reasoning: content.resim_feedback || content.status || "Optimization complete."
+      });
+
+      setIsSaved(true);
+      // Clean up sessionStorage
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("pipeline_final_state");
+      }
+    } catch (err) {
+      console.error("❌ [HITL] Save error:", err);
+    }
   };
 
   return (

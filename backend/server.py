@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from src.graph import build_graph
 from src.agents.discovery_agent import discover_hotels, validate_query
 from src.supabase_client import save_optimization_record
+import traceback
 
 app = FastAPI(title="AEO Optimizer API")
 
@@ -101,22 +102,28 @@ async def websocket_endpoint(websocket: WebSocket):
                     except Exception as send_err:
                         print(f"Error sending update: {send_err}")
         
-        # ── Archive to Supabase after completion ──
-        try:
-            save_optimization_record(final_accumulated_state)
-        except Exception as db_err:
-            print(f"Failed to archive to Supabase: {db_err}")
-        
+        # Send final accumulated state to frontend for explicit save
         await websocket.send_json({
             "type": "system",
             "message": "Pipeline completed",
-            "status": "complete"
+            "status": "complete",
+            "final_state": {
+                "traveller_query": final_accumulated_state.get("traveller_query", ""),
+                "hotel_url": final_accumulated_state.get("hotel_url", ""),
+                "hotel_name": final_accumulated_state.get("aggregated_profile", {}).get("name", "Unknown"),
+                "baseline_score": final_accumulated_state.get("evaluation_score", 0),
+                "optimized_score": final_accumulated_state.get("resim_score", 0),
+                "delta": final_accumulated_state.get("score_delta", 0),
+                "reasoning": final_accumulated_state.get("resim_feedback", ""),
+                "original_profile": final_accumulated_state.get("aggregated_profile", {}),
+                "optimized_profile": final_accumulated_state.get("optimized_profile", {}),
+                "sources": final_accumulated_state.get("sources", []),
+            }
         })
         
     except WebSocketDisconnect:
         print("Frontend disconnected.")
     except Exception as e:
-        import traceback
         error_type = type(e).__name__
         error_msg = f"[{error_type}] {str(e)}"
         stack_trace = traceback.format_exc()
@@ -134,6 +141,46 @@ async def websocket_endpoint(websocket: WebSocket):
             })
         except Exception as send_err:
             print(f"Could not send error to frontend: {send_err}")
+
+# ── Explicit Save Endpoint ─────────────────────────────────────────────
+
+class SaveRecordRequest(BaseModel):
+    traveller_query: str = ""
+    hotel_url: str = ""
+    hotel_name: str = "Unknown"
+    baseline_score: int = 0
+    optimized_score: int = 0
+    delta: int = 0
+    reasoning: str = ""
+    original_profile: dict = {}
+    optimized_profile: dict = {}
+    sources: list = []
+
+@app.post("/api/save_record")
+async def save_record(request: SaveRecordRequest):
+    """
+    Explicitly saves an optimization record to Supabase.
+    Only called when the user clicks 'Save to Database'.
+    """
+    try:
+        record = {
+            "query": request.traveller_query,
+            "hotel_url": request.hotel_url,
+            "hotel_name": request.hotel_name,
+            "baseline_score": request.baseline_score,
+            "optimized_score": request.optimized_score,
+            "delta": request.delta,
+            "reasoning": request.reasoning,
+            "original_profile": request.original_profile,
+            "optimized_profile": request.optimized_profile,
+            "sources": request.sources,
+        }
+        result = save_optimization_record(record)
+        if result:
+            return {"success": True, "id": result.get("id")}
+        return {"success": False, "error": "Failed to save record"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

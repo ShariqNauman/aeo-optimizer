@@ -139,13 +139,7 @@ export const simulatePipeline = (
               delta: data.score_delta,
               status: data.resim_feedback || "Ready for deployment",
               resim_feedback: data.resim_feedback,
-              breakdown: data.sub_scores || data.breakdown || {
-                relevance: Math.round((data.resim_score || 0) * 0.25),
-                completeness: Math.round((data.resim_score || 0) * 0.2),
-                trust_signals: Math.round((data.resim_score || 0) * 0.3),
-                value_proposition: Math.round((data.resim_score || 0) * 0.15),
-                structured_data_quality: Math.round((data.resim_score || 0) * 0.1),
-              },
+              breakdown: data.sub_scores || {},
             },
           },
         };
@@ -154,6 +148,12 @@ export const simulatePipeline = (
       if (stageData) {
         onStageComplete(stageData);
       }
+    } else if (response.type === "system" && response.status === "complete" && response.final_state) {
+      // Store the final state for explicit save via the "Save to Database" button
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pipeline_final_state", JSON.stringify(response.final_state));
+      }
+      console.log("✅ Pipeline complete. Final state stored for manual save.");
     } else if (response.type === "error") {
       console.error("Pipeline Error:", response.message);
       // Create an error stage to show in the UI

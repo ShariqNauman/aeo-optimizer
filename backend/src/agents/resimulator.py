@@ -25,7 +25,12 @@ def resimulator(state: AEOState) -> dict:
     
     if not optimized_profile:
         print("   [Warning] No optimized profile found. Skipping re-simulation.")
-        return {"resim_score": original_score, "score_delta": 0}
+        # Fallback to original sub_scores if available
+        return {
+            "resim_score": original_score, 
+            "score_delta": 0,
+            "sub_scores": state.get("sub_scores", {})
+        }
         
     prompt = f"""You are an AI travel recommendation engine re-evaluating an optimized hotel profile.
 Return ONLY a raw JSON object (no markdown, no code fences, no extra text).
@@ -75,12 +80,17 @@ Respond with ONLY the JSON object."""
         return {
             "resim_score": result.overall_score,
             "resim_feedback": result.reasoning,
-            "score_delta": score_delta
+            "score_delta": score_delta,
+            "sub_scores": result.sub_scores.model_dump(),
         }
         
     except Exception as e:
         print(f"   [Error] Re-simulation failed: {e}")
-        return {"resim_score": original_score, "score_delta": 0}
+        return {
+            "resim_score": original_score, 
+            "score_delta": 0,
+            "sub_scores": state.get("sub_scores", {})
+        }
 
 
 def _format_profile(profile: dict) -> str:
