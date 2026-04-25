@@ -1,3 +1,5 @@
+import { Stage, StageData } from "@/types/stage";
+
 export const getMockStageData = (query: string, hotel: string): Record<Stage, StageData> => {
   return {
     original: {
