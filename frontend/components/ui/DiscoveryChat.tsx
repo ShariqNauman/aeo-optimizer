@@ -28,6 +28,20 @@ interface DiscoveryChatProps {
   setViewState: (state: ViewState) => void;
 }
 
+const isValidUrl = (url: string) => {
+  try {
+    const pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+      '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+    return !!pattern.test(url);
+  } catch (e) {
+    return false;
+  }
+};
+
 export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: DiscoveryChatProps) => {
   const [query, setQuery] = useState("");
   const [hotelUrl, setHotelUrl] = useState("");
@@ -36,6 +50,8 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
   const [hotels, setHotels] = useState<{name: string, url: string}[]>([]);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const setSession = useSessionStore((state) => state.setSession);
   const clearSession = useSessionStore((state) => state.clearSession);
   
@@ -97,13 +113,52 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
         setIsError(false);
         setErrorMessage(null);
       }
-      setViewState("RESULTS");
-    } catch (error) {
-      console.error("Discovery error:", error);
+    } catch (err) {
+      console.error("Discovery error:", err);
       setIsError(true);
-      // Fallback to initial if failed? Or stay on searching with error?
-      // Let's go to results but show error message
-      setViewState("RESULTS");
+      setErrorMessage("Agentic discovery protocol failed. Please verify your connection.");
+    } finally {
+      // Small delay to ensure smooth transition
+      setTimeout(() => {
+        setViewState("RESULTS");
+      }, 500);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!hotelUrl || !isValidUrl(hotelUrl)) return;
+    
+    setIsValidatingUrl(true);
+    setUrlError(null);
+    
+    try {
+      let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+      if (!backendUrl.startsWith("http")) {
+        backendUrl = `https://${backendUrl}`;
+      }
+      const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+      
+      const response = await fetch(`${cleanBackendUrl}/api/validate_url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: hotelUrl }),
+      });
+      
+      if (!response.ok) throw new Error("Validation failed");
+      
+      const data = await response.json();
+      
+      if (data.is_valid) {
+        onDiscoverWhy(submittedQuery, hotelUrl);
+      } else {
+        setUrlError(data.reason || "This doesn't look like a valid hotel website.");
+      }
+    } catch (err) {
+      console.error("URL Validation error:", err);
+      // Fallback: allow if AI fails but regex passed
+      onDiscoverWhy(submittedQuery, hotelUrl);
+    } finally {
+      setIsValidatingUrl(false);
     }
   };
 
@@ -114,7 +169,9 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
     setHotelUrl("");
     setSubmittedQuery("");
     setHotels([]);
+    setIsError(false);
     setErrorMessage(null);
+    setUrlError(null);
   };
 
   const handleTerminate = () => {
@@ -405,24 +462,40 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
                               <div className="space-y-6">
                                 <div className="flex items-center justify-between px-2">
                                   <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.5em] font-mono">Target_URL</label>
+                                  {hotelUrl && !isValidUrl(hotelUrl) && (
+                                    <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest animate-pulse">Invalid URL Format</span>
+                                  )}
+                                  {urlError && (
+                                    <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest animate-pulse">{urlError}</span>
+                                  )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-4">
                                   <input
                                     autoFocus
+                                    disabled={isValidatingUrl}
                                     type="text"
-                                    placeholder="Source URL required..."
+                                    placeholder="https://hotel-website.com"
                                     value={hotelUrl}
                                     onChange={(e) => {
                                       setHotelUrl(e.target.value);
                                       setSession(submittedQuery, e.target.value);
+                                      if (urlError) setUrlError(null);
                                     }}
-                                    className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-white placeholder:text-white/5 focus:ring-1 focus:ring-accent/40 outline-none transition-all font-mono text-sm"
+                                    className={`flex-1 bg-black/40 border ${hotelUrl && (!isValidUrl(hotelUrl) || urlError) ? 'border-red-500/50' : 'border-white/10'} rounded-2xl px-6 py-5 text-white placeholder:text-white/5 focus:ring-1 focus:ring-accent/40 outline-none transition-all font-mono text-sm disabled:opacity-50`}
                                   />
                                   <Button 
-                                    onClick={() => onDiscoverWhy(submittedQuery, hotelUrl)}
-                                    className="bg-accent hover:bg-accent/90 px-10 py-5 font-black uppercase tracking-[0.4em] text-xs shadow-[0_0_30px_rgba(202,138,4,0.2)] border-none rounded-2xl"
+                                    disabled={!isValidUrl(hotelUrl) || isValidatingUrl}
+                                    onClick={handleAnalyze}
+                                    className="bg-accent hover:bg-accent/90 disabled:bg-white/5 disabled:text-white/20 px-10 py-5 font-black uppercase tracking-[0.4em] text-xs shadow-[0_0_30px_rgba(202,138,4,0.2)] border-none rounded-2xl transition-all"
                                   >
-                                    Analyze
+                                    {isValidatingUrl ? (
+                                      <>
+                                        <Loader2 className="mr-3 w-4 h-4 animate-spin" />
+                                        Checking...
+                                      </>
+                                    ) : (
+                                      "Analyze"
+                                    )}
                                   </Button>
                                 </div>
                                 <div className="flex justify-center">

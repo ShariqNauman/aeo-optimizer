@@ -29,6 +29,9 @@ graph = build_graph()
 class SearchRequest(BaseModel):
     query: str
 
+class UrlValidationRequest(BaseModel):
+    url: str
+
 class HotelResult(BaseModel):
     name: str
     url: str
@@ -38,7 +41,23 @@ class SearchResponse(BaseModel):
     is_valid: bool = True
     error_message: str | None = None
 
+class UrlValidationResponse(BaseModel):
+    is_valid: bool
+    reason: str | None = None
+
 # ── Endpoints ─────────────────────────────────────────────────────────
+
+@app.post("/api/validate_url", response_model=UrlValidationResponse)
+async def validate_hotel_url(request: UrlValidationRequest):
+    """
+    Endpoint to validate if a URL is likely a hotel website using AI.
+    """
+    from src.agents.discovery_agent import validate_url
+    validation = validate_url(request.url)
+    return {
+        "is_valid": validation.is_valid,
+        "reason": validation.reason
+    }
 
 @app.post("/api/search_hotels", response_model=SearchResponse)
 async def search_hotels(request: SearchRequest):

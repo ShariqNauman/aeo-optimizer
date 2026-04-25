@@ -19,6 +19,10 @@ class QueryValidation(BaseModel):
     reason: str = Field(description="Brief reason for the validation result")
     suggested_query: Optional[str] = Field(description="If invalid, a suggestion for a better query. If valid, the original or a slightly improved query.")
 
+class UrlValidation(BaseModel):
+    is_valid: bool = Field(description="True if the URL is likely a legitimate hotel or resort website, False otherwise")
+    reason: str = Field(description="Brief reason for the validation result")
+
 def validate_query(query: str) -> QueryValidation:
     """Uses Gemini to validate if the user query is a legitimate travel/hotel query."""
     print(f"   [Gemini] Validating query: '{query}'")
@@ -56,6 +60,34 @@ def validate_query(query: str) -> QueryValidation:
     except Exception as e:
         print(f"   [Error] Validation failed: {e}")
         return QueryValidation(is_valid=True, reason="Validation skipped due to error", suggested_query=query)
+
+def validate_url(url: str) -> UrlValidation:
+    """Uses Gemini to validate if the provided URL is likely a hotel website."""
+    print(f"   [Gemini] Validating URL: '{url}'")
+    
+    structured_llm = get_llm().with_structured_output(UrlValidation)
+    
+    prompt = f"""
+    You are a website validator for a hotel optimization tool. Your job is to determine if the provided URL is likely the official website of a hotel, resort, or accommodation.
+    
+    URL: "{url}"
+    
+    Criteria for Validity:
+    1. The URL should point to a hotel, resort, inn, boutique stay, or similar lodging.
+    2. Booking platforms (Expedia, Booking.com, Airbnb, etc.) are NOT official hotel websites, but for this tool, they might be acceptable if they point to a specific hotel listing. However, general sites like google.com, facebook.com, or news sites are INVALID.
+    3. The domain name often contains "hotel", "resort", "inn", or the property name.
+    
+    Return a JSON object with:
+    - is_valid: boolean
+    - reason: explanation (max 10 words)
+    """
+    
+    try:
+        result = structured_llm.invoke(prompt)
+        return result
+    except Exception as e:
+        print(f"   [Error] URL validation failed: {e}")
+        return UrlValidation(is_valid=True, reason="Validation skipped due to error")
 
 def discover_hotels(user_query: str) -> List[dict]:
     """
