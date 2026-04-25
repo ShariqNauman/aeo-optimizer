@@ -165,6 +165,7 @@ async def save_record(request: SaveRecordRequest):
     Only called when the user clicks 'Save to Database'.
     """
     try:
+        print(f">> [API] Save record request received for: {request.hotel_url}")
         record = {
             "query": request.traveller_query,
             "hotel_url": request.hotel_url,
@@ -179,9 +180,13 @@ async def save_record(request: SaveRecordRequest):
         }
         result = save_optimization_record(record)
         if result:
+            print(f"   [API] Record successfully archived in Supabase.")
             return {"success": True, "id": result.get("id")}
-        return {"success": False, "error": "Failed to save record"}
+        
+        print(f"   [API] Database save failed (supabase client returned None). Check env vars.")
+        return {"success": False, "error": "Database save failed. Ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in Railway."}
     except Exception as e:
+        print(f"   [API] Exception during save: {e}")
         return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":

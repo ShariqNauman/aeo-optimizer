@@ -40,42 +40,47 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
         if (!backendUrl.startsWith("http")) {
           backendUrl = `https://${backendUrl}`;
         }
-        // Remove trailing slash if present
         const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+        
         const response = await fetch(`${cleanBackendUrl}/api/save_record`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(finalState),
         });
+        
         const result = await response.json();
 
         if (result.success) {
           console.log("💾 [HITL] Record saved to Supabase. ID:", result.id);
+          
+          // Only update UI if save was successful
+          addRecord({
+            date: new Date().toISOString().split('T')[0],
+            query: query || "Custom Discovery Session",
+            url: hotel || "https://example.com",
+            baseline: (content.finalScore || 0) - (content.delta || 0),
+            optimized: content.finalScore || 0,
+            delta: content.delta ? `+${content.delta}` : "+0",
+            reasoning: content.resim_feedback || content.status || "Optimization complete."
+          });
+
+          setIsSaved(true);
+          
+          // Clean up sessionStorage
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("pipeline_final_state");
+          }
         } else {
           console.warn("⚠️ [HITL] Backend save failed:", result.error);
+          alert(`Database Save Failed: ${result.error}. Please check if Supabase variables are set in Railway.`);
         }
       } else {
         console.warn("⚠️ [HITL] No pipeline final state found in session.");
-      }
-
-      // Also update local store for immediate UI feedback
-      addRecord({
-        date: new Date().toISOString().split('T')[0],
-        query: query || "Custom Discovery Session",
-        url: hotel || "https://example.com",
-        baseline: (content.finalScore || 0) - (content.delta || 0),
-        optimized: content.finalScore || 0,
-        delta: content.delta ? `+${content.delta}` : "+0",
-        reasoning: content.resim_feedback || content.status || "Optimization complete."
-      });
-
-      setIsSaved(true);
-      // Clean up sessionStorage
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("pipeline_final_state");
+        alert("Session state lost. Please try running the simulation again.");
       }
     } catch (err) {
       console.error("❌ [HITL] Save error:", err);
+      alert("A network error occurred while saving. Check your internet connection.");
     }
   };
 
