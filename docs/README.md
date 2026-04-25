@@ -6,9 +6,9 @@
 ## 🎥 1. Pitching Video
 > **Important:** Please watch our pitching video to see WeBoosta in action!
 
-[![Watch the Pitching Video](https://img.shields.io/badge/▶_Watch_Pitching_Video-Placeholder_Link-red?style=for-the-badge)](https://your-google-drive-link-here.com)
+[![Watch the Pitching Video](https://img.shields.io/badge/▶_Watch_Pitching_Video-Red?style=for-the-badge)](https://drive.google.com/file/d/1Ngip81kyP2aR-nUTL_b-SdVoAenoVH43/view?usp=sharing)
 
-*(Link to Google Drive / Cloud Storage)*
+*(Link to Google Drive)*
 
 ---
 
