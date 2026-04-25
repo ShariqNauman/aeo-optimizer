@@ -40,7 +40,9 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
         if (!backendUrl.startsWith("http")) {
           backendUrl = `https://${backendUrl}`;
         }
-        const response = await fetch(`${backendUrl}/api/save_record`, {
+        // Remove trailing slash if present
+        const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+        const response = await fetch(`${cleanBackendUrl}/api/save_record`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(finalState),

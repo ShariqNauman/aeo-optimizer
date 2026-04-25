@@ -18,7 +18,9 @@ export const simulatePipeline = (
   if (!backendUrl.startsWith("http")) {
     backendUrl = `https://${backendUrl}`;
   }
-  const wsUrl = backendUrl.replace("http", "ws");
+  // Remove trailing slash if present
+  const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+  const wsUrl = cleanBackendUrl.replace("http", "ws");
   const ws = new WebSocket(`${wsUrl}/ws/optimize`);
 
   ws.onopen = () => {

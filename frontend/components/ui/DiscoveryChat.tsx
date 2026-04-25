@@ -76,7 +76,9 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
       if (!backendUrl.startsWith("http")) {
         backendUrl = `https://${backendUrl}`;
       }
-      const response = await fetch(`${backendUrl}/api/search_hotels`, {
+      // Remove trailing slash if present to avoid double slashes
+      const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+      const response = await fetch(`${cleanBackendUrl}/api/search_hotels`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: query }),
