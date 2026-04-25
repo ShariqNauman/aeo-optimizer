@@ -36,7 +36,10 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
 
       if (finalState) {
         // Call backend API to save to Supabase
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+        if (!backendUrl.startsWith("http")) {
+          backendUrl = `https://${backendUrl}`;
+        }
         const response = await fetch(`${backendUrl}/api/save_record`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
