@@ -10,7 +10,7 @@ data in the exact schema we need.
 
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
-from src.llm import get_structured_llm
+from src.llm import get_llm
 from src.state import AEOState
 
 
@@ -55,7 +55,7 @@ class HotelProfile(BaseModel):
     @classmethod
     def flatten_to_strings(cls, v):
         """
-        Z.AI often returns a list of objects instead of strings for these fields.
+        Gemini often returns a list of objects instead of strings for these fields.
         Flatten them to strings: {'name': 'X', 'details': 'Y'} -> 'X: Y'
         """
         if not isinstance(v, list):
@@ -79,8 +79,7 @@ class HotelProfile(BaseModel):
 
 
 # Maximum characters of raw web content sent to the LLM.
-# Z.AI's ilmu-glm-5.1 has a limited context window — keep prompts short.
-_MAX_RAW_CHARS = 6000
+_MAX_RAW_CHARS = 100000
 
 
 def _format_raw_data(raw_data: dict) -> str:
@@ -140,8 +139,8 @@ structured_data_available (bool).
 Be thorough — extract every amenity, room type, and dining option you can find.
 Respond with ONLY the JSON object."""
     
-    # Use Z.AI with JSON-schema structured output
-    structured_llm = get_structured_llm(HotelProfile)
+    # Use Gemini with built-in structured output
+    structured_llm = get_llm().with_structured_output(HotelProfile)
     
     try:
         profile = structured_llm.invoke(prompt)

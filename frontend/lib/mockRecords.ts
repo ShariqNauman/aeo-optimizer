@@ -7,6 +7,8 @@ export interface RecordEntry {
   optimized: number;
   delta: string;
   reasoning: string;
+  original_profile?: any;
+  optimized_profile?: any;
 }
 
 export const mockRecords: RecordEntry[] = [

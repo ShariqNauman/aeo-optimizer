@@ -7,7 +7,7 @@ Takes the original aggregated profile and the list of gaps, and
 outputs a new, optimized profile that resolves those weaknesses.
 """
 
-from src.llm import get_structured_llm
+from src.llm import get_llm
 from src.state import AEOState
 from src.agents.data_aggregation import HotelProfile
 
@@ -65,7 +65,7 @@ unique_selling_points (list), nearby_attractions (list), contact_info, structure
 
 Respond with ONLY the JSON object."""
 
-    structured_llm = get_structured_llm(HotelProfile)
+    structured_llm = get_llm().with_structured_output(HotelProfile)
     
     try:
         optimized = structured_llm.invoke(prompt)

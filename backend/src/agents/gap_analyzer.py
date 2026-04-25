@@ -9,7 +9,7 @@ prioritised list of gaps with suggested improvements.
 """
 
 from pydantic import BaseModel, Field
-from src.llm import get_structured_llm
+from src.llm import get_llm
 from src.state import AEOState
 
 
@@ -106,7 +106,7 @@ Required JSON format:
 
 Respond with ONLY the JSON object."""
 
-    structured_llm = get_structured_llm(GapAnalysisResult)
+    structured_llm = get_llm().with_structured_output(GapAnalysisResult)
 
     try:
         result = structured_llm.invoke(prompt)

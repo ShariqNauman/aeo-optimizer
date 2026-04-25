@@ -12,7 +12,7 @@ Takes the aggregated hotel profile + traveller query and produces:
 """
 
 from pydantic import BaseModel, Field
-from src.llm import get_llm, get_structured_llm
+from src.llm import get_llm
 from src.state import AEOState
 
 
@@ -109,7 +109,7 @@ Required JSON fields:
 
 Respond with ONLY the JSON object."""
 
-    structured_llm = get_structured_llm(SimulationResult)
+    structured_llm = get_llm().with_structured_output(SimulationResult)
 
     try:
         result = structured_llm.invoke(prompt)

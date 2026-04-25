@@ -2,7 +2,7 @@ import os
 from typing import List, Optional
 from pydantic import BaseModel, Field, AliasChoices
 from tavily import TavilyClient
-from src.llm import get_structured_llm
+from src.llm import get_llm
 
 class HotelDiscoveryResult(BaseModel):
     name: str = Field(description="The name of the hotel")
@@ -20,8 +20,8 @@ class QueryValidation(BaseModel):
     suggested_query: Optional[str] = Field(description="If invalid, a suggestion for a better query. If valid, the original or a slightly improved query.")
 
 def validate_query(query: str) -> QueryValidation:
-    """Uses Z.AI to validate if the user query is a legitimate travel/hotel query."""
-    print(f"   [Z.AI] Validating query: '{query}'")
+    """Uses Gemini to validate if the user query is a legitimate travel/hotel query."""
+    print(f"   [Gemini] Validating query: '{query}'")
     
     # Basic pre-validation
     clean_query = query.strip()
@@ -32,7 +32,7 @@ def validate_query(query: str) -> QueryValidation:
             suggested_query=None
         )
 
-    structured_llm = get_structured_llm(QueryValidation)
+    structured_llm = get_llm().with_structured_output(QueryValidation)
     
     prompt = f"""
     You are a travel query validator. Your job is to determine if a user's query is a legitimate request to find hotels, resorts, or travel accommodations.
@@ -61,7 +61,7 @@ def discover_hotels(user_query: str) -> List[dict]:
     """
     Standalone agent that:
     1. Searches for hotels based on user's natural language query using Tavily.
-    2. Parses the results using Z.AI to extract hotel names and official URLs.
+    2. Parses the results using Gemini to extract hotel names and official URLs.
     3. Returns a list of results.
     """
     print(f"\n>> [Discovery Agent] Searching for: {user_query}")
@@ -92,10 +92,10 @@ def discover_hotels(user_query: str) -> List[dict]:
         max_results=10
     )
     
-    # 2. Parse with Z.AI
-    print(f"   [Z.AI] Parsing {len(search_results['results'])} search results...")
+    # 2. Parse with Gemini
+    print(f"   [Gemini] Parsing {len(search_results['results'])} search results...")
     
-    structured_llm = get_structured_llm(DiscoveryResponse)
+    structured_llm = get_llm().with_structured_output(DiscoveryResponse)
     
     prompt = f"""
     You are an expert travel researcher. I will provide you with search results for a hotel query.

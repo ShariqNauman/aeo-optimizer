@@ -9,7 +9,7 @@ the optimized_profile. Calculates the score difference.
 
 from src.state import AEOState
 from src.agents.ai_simulator import SimulationResult
-from src.llm import get_structured_llm
+from src.llm import get_llm
 
 def resimulator(state: AEOState) -> dict:
     """
@@ -60,7 +60,7 @@ Required JSON fields:
 
 Respond with ONLY the JSON object."""
 
-    structured_llm = get_structured_llm(SimulationResult)
+    structured_llm = get_llm().with_structured_output(SimulationResult)
     
     try:
         result = structured_llm.invoke(prompt)

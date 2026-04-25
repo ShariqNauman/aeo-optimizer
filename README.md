@@ -17,8 +17,8 @@
 
 We are proud to present **WeBoosta**, developed for UMHackathon 2026. 
 
-### 🤝 Powered by Z.AI
-WeBoosta's core reasoning and multi-agent orchestration are proudly powered by **Z.AI's GLM (ilmu-glm-5.1)**. We leverage Z.AI's robust capabilities to simulate AI decision-making and generate structured, highly-optimized data.
+### 🤝 Powered by Google Gemini
+WeBoosta's core reasoning and multi-agent orchestration are proudly powered by **Google Gemini 3.1 Pro**. We leverage Gemini's advanced reasoning and massive context window to simulate AI decision-making and generate highly-optimized, machine-readable data.
 
 ---
 
@@ -56,22 +56,98 @@ Currently, optimizing a hotel or business for digital discovery is a painfully m
 Instead of guessing what an AI wants, WeBoosta **simulates** the AI. We evaluate a property's likelihood of being selected by an AI agent and automatically generate optimized, machine-readable content to guarantee higher selection rates.
 
 ### ⚙️ How the WeBoosta Pipeline Works:
-Our system utilizes a stateful LangGraph multi-agent pipeline orchestrated by **Z.AI GLM** across sequential stages:
+Our system utilizes a stateful **LangGraph** multi-agent pipeline orchestrated by **Gemini 3.1** across sequential stages:
 
-1. 📥 **Input & Web Research**: Ingests raw, unstructured data about a hotel.
-2. 🗂️ **Data Aggregation**: Structures the fragmented profile into a cohesive baseline.
-3. 🤖 **AI Decision Simulator**: Simulates an actual AI travel agent evaluating the property against specific traveler queries (e.g., "luxury family hotel").
-4. 🔍 **Gap Analyzer**: Identifies exactly *why* the AI might skip the property (missing trust signals, lack of structured data, weak value propositions).
-5. ✍️ **Optimization Agent**: Automatically rewrites and structures the content to address every identified gap, optimizing for machine readability.
-6. ✅ **Validator & Re-simulator**: QA checks the new profile and re-runs the simulation to mathematically prove the improvement in the property's AI "selection score".
-7. 🧑‍💻 **Human-in-the-Loop (HITL)**: Presents a beautiful, comparative dashboard for human approval before final deployment.
+1. 🔍 **Discovery & Intelligence**: Validates natural language queries and discovers candidate hotels using AI-powered search (Tavily) to find official digital footprints.
+2. 📥 **Web Research & Extraction**: Crawls the selected hotel's entire website using **Firecrawl** to ingest raw, unstructured data.
+3. 🗂️ **Data Aggregation**: Synthesizes fragmented content into a cohesive, structured profile using Gemini's large-context processing.
+4. 🤖 **AI Decision Simulator**: Simulates an actual AI travel agent evaluating the property against the user's specific query to calculate an initial "Selection Score".
+5. 📊 **Gap Analyzer**: Identifies exactly *why* the AI might skip the property (missing trust signals, weak schema markup, or lack of semantic relevance).
+6. ✍️ **Autonomous Optimization**: Automatically generates optimized, schema-ready content and high-impact USPs to address every identified gap.
+7. ✅ **QA Validation**: Uses Gemini to verify the optimized profile against the original gaps, ensuring factual accuracy and ensuring no hallucinations were introduced.
+8. 📈 **AI Re-simulation**: Re-evaluates the optimized profile using the AI Decision Simulator to mathematically prove the score improvement and ROI.
+9. 🧑‍💻 **Human-in-the-Loop (HITL)**: Presents a beautiful, comparative dashboard for human approval before archiving the results to **Supabase**.
+
+---
+
+## 🛠️ Local Setup
+
+### 1. Prerequisites
+- **Node.js** (v18+) & **npm**
+- **Python** (v3.10+)
+- **Supabase Account** (for database persistence and history)
+
+### 2. Backend Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   # On Windows:
+   .\venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Create a `.env` file in the `backend` folder:
+   ```env
+   GOOGLE_API_KEY=your_gemini_key
+   FIRECRAWL_API_KEY=your_firecrawl_key
+   TAVILY_API_KEY=your_tavily_key
+   SUPABASE_URL=your_project_url
+   SUPABASE_ANON_KEY=your_anon_key
+   ```
+5. Run the API server:
+   ```bash
+   python server.py
+   ```
+
+### 3. Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env.local` file for Supabase client-side access:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
 ## 💻 Tech Stack
-* **Frontend Dashboard:** Next.js, React, Tailwind CSS, React Three Fiber (for 3D data visualization), Framer Motion.
-* **Agentic Backend:** Python, FastAPI, LangGraph.
-* **LLM Engine:** Z.AI (ilmu-glm-5.1) for advanced multi-step reasoning and structured JSON output.
+
+### 🎨 Frontend
+* **Framework:** Next.js (App Router), React
+* **Styling:** Tailwind CSS, Framer Motion (for smooth transitions)
+* **Visualization:** React Three Fiber & Drei (3D Agentic Simulation visualization)
+* **State Management:** React Hooks & WebSocket integration for real-time updates
+
+### ⚙️ Agentic Backend
+* **Language:** Python 3.10+
+* **Framework:** FastAPI (High-performance asynchronous API)
+* **Orchestration:** LangGraph (Stateful, multi-agent orchestration)
+* **LLM Integration:** LangChain (Interface for Google Gemini 3.1 Pro and other model providers)
+* **Real-time Communication:** WebSockets (Streaming agent updates to frontend)
+* **Search & Discovery:**
+    - **Tavily AI Search:** For deep hotel discovery and market research.
+    - **Firecrawl:** For high-fidelity web scraping and content extraction.
+    - **DuckDuckGo Search:** For auxiliary information gathering.
+* **Database & Persistence:** Supabase (PostgreSQL) for archiving optimization records and simulation history.
+* **Environment:** Pydantic for robust data validation and schema enforcement.
 
 ---
 

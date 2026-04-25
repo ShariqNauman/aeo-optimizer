@@ -34,7 +34,7 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str]]:
         app = FirecrawlApp(api_key=api_key)
         
         print(f"   [Firecrawl] Crawling {url} (this may take a minute)...")
-        # Crawl the site up to 4 pages to get comprehensive info without exploding token count
+        # Crawl the site up to 5 pages to get comprehensive info without exploding token count
         job = app.crawl(
             url, 
             limit=5, 
