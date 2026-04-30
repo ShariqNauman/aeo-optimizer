@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { DiscoveryChat, ViewState } from "@/components/ui/DiscoveryChat";
+import { useAuth } from "@/lib/auth";
 import { ShieldCheck, Zap, BarChart3 } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
   const [viewState, setViewState] = useState<ViewState>("INITIAL");
 
   const handleDiscoverWhy = (query: string, hotelUrl: string) => {
@@ -15,6 +17,19 @@ export default function Home() {
     const params = new URLSearchParams({ query, hotel: hotelUrl });
     router.push(`/cube?${params.toString()}`);
   };
+
+  // Called by DiscoveryChat before submitting
+  const handleAuthGate = useCallback((proceedCallback: () => void, pendingQuery: string) => {
+    if (user) {
+      // User is logged in, proceed immediately
+      proceedCallback();
+    } else {
+      // Save pending query to localStorage to resume after login
+      localStorage.setItem("weboosta_pending_query", pendingQuery);
+      // Redirect to new auth page
+      router.push("/auth?redirect=/");
+    }
+  }, [user, router]);
 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background">
@@ -49,7 +64,8 @@ export default function Home() {
         <DiscoveryChat 
           viewState={viewState} 
           setViewState={setViewState} 
-          onDiscoverWhy={handleDiscoverWhy} 
+          onDiscoverWhy={handleDiscoverWhy}
+          onAuthGate={handleAuthGate}
         />
 
         <motion.div

@@ -26,6 +26,7 @@ interface DiscoveryChatProps {
   onDiscoverWhy: (query: string, hotelUrl: string) => void;
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
+  onAuthGate?: (proceedCallback: () => void, query: string) => void;
 }
 
 const MAX_QUERY_WORDS = 30;
@@ -48,7 +49,7 @@ const isValidUrl = (url: string) => {
   }
 };
 
-export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: DiscoveryChatProps) => {
+export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState, onAuthGate }: DiscoveryChatProps) => {
   const [query, setQuery] = useState("");
   const [hotelUrl, setHotelUrl] = useState("");
   const [statusIndex, setStatusIndex] = useState(0);
@@ -83,18 +84,23 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
     return () => { if (interval) clearInterval(interval); };
   }, [viewState, statusMessages.length]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    
-    if (getWordCount(query) > MAX_QUERY_WORDS) {
-      setIsError(true);
-      setErrorMessage(`Query too long. Please keep it under ${MAX_QUERY_WORDS} words.`);
-      return;
+  // Check for pending query from auth redirect
+  useEffect(() => {
+    const pendingQuery = localStorage.getItem("weboosta_pending_query");
+    if (pendingQuery) {
+      setQuery(pendingQuery);
+      localStorage.removeItem("weboosta_pending_query");
+      // Use setTimeout to ensure state updates before execution
+      setTimeout(() => {
+        executeSubmit(pendingQuery);
+      }, 100);
     }
-    
-    setSubmittedQuery(query);
-    setSession(query, ""); 
+  }, []);
+
+  const executeSubmit = async (queryToSubmit?: string) => {
+    const q = queryToSubmit || query;
+    setSubmittedQuery(q);
+    setSession(q, ""); 
     setViewState("SEARCHING");
     setStatusIndex(0);
     setIsError(false);
@@ -104,12 +110,11 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
       if (!backendUrl.startsWith("http")) {
         backendUrl = `https://${backendUrl}`;
       }
-      // Remove trailing slash if present to avoid double slashes
       const cleanBackendUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
       const response = await fetch(`${cleanBackendUrl}/api/search_hotels`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query }),
+        body: JSON.stringify({ query: q }),
       });
 
       if (!response.ok) throw new Error("Search failed");
@@ -130,11 +135,30 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState }: Discov
       setIsError(true);
       setErrorMessage("Agentic discovery protocol failed. Please verify your connection.");
     } finally {
-      // Small delay to ensure smooth transition
       setTimeout(() => {
         setViewState("RESULTS");
       }, 500);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    
+    if (getWordCount(query) > MAX_QUERY_WORDS) {
+      setIsError(true);
+      setErrorMessage(`Query too long. Please keep it under ${MAX_QUERY_WORDS} words.`);
+      return;
+    }
+
+    // Auth gate: if onAuthGate is provided, check auth before proceeding
+    if (onAuthGate) {
+      onAuthGate(() => executeSubmit(query), query);
+      return;
+    }
+    
+    // No auth gate, proceed directly
+    await executeSubmit(query);
   };
 
   const handleAnalyze = async () => {
