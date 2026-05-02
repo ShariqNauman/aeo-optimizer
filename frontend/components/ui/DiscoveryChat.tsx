@@ -15,7 +15,8 @@ import {
   Globe,
   Loader2,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import { Button } from "./Button";
 import { useSessionStore } from "@/lib/store";
@@ -399,26 +400,44 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState, onAuthGa
 
                               <div className="grid gap-4">
                                 {hotels.length > 0 ? (
-                                  hotels.map((hotel, i) => (
-                                    <motion.a
-                                      key={`${hotel.name}-${i}`}
-                                      href={hotel.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      initial={{ opacity: 0, scale: 0.95 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      transition={{ delay: 0.4 + i * 0.1 }}
-                                      className="flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-lg"
-                                    >
-                                      <div className="flex items-center gap-6">
-                                        <div className="w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center group-hover:bg-accent/20 transition-all group-hover:scale-110">
-                                          <Hotel className="w-5 h-5 text-accent" />
+                                  hotels.map((hotel, i) => {
+                                    const hasUrl = !!hotel.url;
+                                    return (
+                                      <motion.div
+                                        key={`${hotel.name}-${i}`}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.4 + i * 0.1 }}
+                                        className={`flex items-center justify-between group p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 transition-all shadow-lg ${
+                                          hasUrl 
+                                            ? "hover:bg-white/[0.05] hover:border-accent/40 cursor-pointer" 
+                                            : "opacity-60 cursor-not-allowed"
+                                        }`}
+                                        onClick={() => hasUrl && window.open(hotel.url, "_blank")}
+                                      >
+                                        <div className="flex items-center gap-6">
+                                          <div className={`w-12 h-12 rounded-xl bg-accent/5 flex items-center justify-center transition-all ${hasUrl ? "group-hover:bg-accent/20 group-hover:scale-110" : ""}`}>
+                                            <Hotel className="w-5 h-5 text-accent" />
+                                          </div>
+                                          <div className="flex flex-col">
+                                            <span className={`text-white text-lg font-medium tracking-tight transition-colors ${hasUrl ? "group-hover:text-accent" : ""}`}>
+                                              {hotel.name}
+                                            </span>
+                                            {!hasUrl && (
+                                              <span className="text-[9px] uppercase tracking-widest font-bold text-red-500/60 mt-1">
+                                                Official Website Unavailable
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
-                                        <span className="text-white text-lg font-medium tracking-tight group-hover:text-accent transition-colors">{hotel.name}</span>
-                                      </div>
-                                      <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
-                                    </motion.a>
-                                  ))
+                                        {hasUrl ? (
+                                          <ExternalLink className="w-5 h-5 text-white/10 group-hover:text-white/60 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                        ) : (
+                                          <X className="w-4 h-4 text-white/5" />
+                                        )}
+                                      </motion.div>
+                                    );
+                                  })
                                 ) : !isError && (
                                   <p className="text-white/20 font-mono text-[10px] text-center py-10 uppercase tracking-[0.3em]">
                                     No candidates discovered in current sector.

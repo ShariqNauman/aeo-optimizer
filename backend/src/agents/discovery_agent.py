@@ -1,8 +1,84 @@
 import os
 import json
+import requests
+import concurrent.futures
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from typing import List, Optional
 from pydantic import BaseModel, Field, AliasChoices
 from src.llm import get_llm, get_search_llm
+
+def _check_url(url: str, timeout: int = 8) -> bool:
+    """Low-level check: returns True if URL is reachable (HTTP 200-399)."""
+    if not url or not url.startswith("http"):
+        return False
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    try:
+        resp = requests.head(url, timeout=timeout, allow_redirects=True, headers=headers, verify=False)
+        if resp.status_code >= 400:
+            resp = requests.get(url, timeout=timeout, allow_redirects=True, headers=headers, stream=True, verify=False)
+        return resp.status_code < 400
+    except Exception:
+        try:
+            resp = requests.get(url, timeout=timeout, allow_redirects=True, headers=headers, stream=True, verify=False)
+            return resp.status_code < 400
+        except Exception:
+            return False
+
+
+def _generate_url_variations(url: str) -> list[str]:
+    """Generate common TLD variations for a URL to fix LLM hallucinated domains."""
+    from urllib.parse import urlparse
+    variations = []
+    parsed = urlparse(url)
+    domain = parsed.netloc
+    scheme = parsed.scheme or "https"
+    path = parsed.path
+
+    # .com.my → .com (strip ".my")
+    if domain.endswith(".com.my"):
+        alt_domain = domain[:-3]  # strip ".my"
+        variations.append(f"{scheme}://{alt_domain}{path}")
+    # .com → .com.my (add ".my" for Malaysian hotels)
+    elif domain.endswith(".com") and not domain.endswith(".com.my"):
+        alt_domain = domain + ".my"
+        variations.append(f"{scheme}://{alt_domain}{path}")
+    # .my (non .com.my) → .com
+    elif domain.endswith(".my"):
+        alt_domain = domain[:-3] + ".com"
+        variations.append(f"{scheme}://{alt_domain}{path}")
+    
+    # Try adding/removing www
+    if domain.startswith("www."):
+        variations.append(f"{scheme}://{domain[4:]}{path}")
+    else:
+        variations.append(f"{scheme}://www.{domain}{path}")
+
+    return variations
+
+
+def verify_and_fix_url(url: str) -> str:
+    """
+    Verify a URL is reachable. If not, try common TLD variations.
+    Returns the working URL, or empty string if nothing works.
+    """
+    if not url:
+        return ""
+
+    # 1. Try the original URL first
+    if _check_url(url):
+        return url
+
+    # 2. Try common variations (e.g., .com.my → .com)
+    for alt_url in _generate_url_variations(url):
+        if _check_url(alt_url):
+            print(f"   [URL Fix] {url} → {alt_url}")
+            return alt_url
+
+    return ""
+
 
 class HotelDiscoveryResult(BaseModel):
     name: str = Field(description="The name of the hotel")
@@ -125,6 +201,7 @@ Important:
 - Only include real, currently operating hotels, resorts, inns, boutique stays, or serviced apartments
 - NEVER include healthcare facilities, nursing homes, assisted living centers, rehabilitation centres, hospitals, clinics, or any non-lodging business
 - NEVER include retirement homes, elder care facilities, or care homes
+- For resorts with golf courses/country clubs, provide the URL for the HOTEL booking site, NOT the golf club membership/course site.
 - Every result MUST be a place where travellers can book overnight accommodation
 - Make sure URLs are accurate and point to the hotel's official website
 - Include up to 10 results
@@ -156,6 +233,7 @@ Important:
 
         CRITICAL: Only include hotels, resorts, and lodging accommodations.
         Exclude any result that is NOT a bookable overnight accommodation (e.g., healthcare, nursing homes, clinics, care homes).
+        If a hotel is part of a larger country club or golf resort, ensure the URL provided is for the HOTEL accommodation, not the golf course or membership page.
 
         Example JSON output:
         {{
@@ -169,8 +247,23 @@ Important:
         """
         
         response: DiscoveryResponse = structured_llm.invoke(parse_prompt)
-        print(f"   [Discovery Agent] Successfully found {len(response.hotels)} hotels.")
-        return [hotel.model_dump() for hotel in response.hotels]
+        print(f"   [Discovery Agent] Found {len(response.hotels)} hotels. Verifying URLs...")
+        
+        hotels_data = [hotel.model_dump() for hotel in response.hotels]
+        
+        # 3. Concurrent URL verification + auto-fix
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_index = {executor.submit(verify_and_fix_url, h["url"]): i for i, h in enumerate(hotels_data)}
+            
+            for future in concurrent.futures.as_completed(future_to_index):
+                index = future_to_index[future]
+                fixed_url = future.result()
+                if not fixed_url:
+                    print(f"   [URL Check] FAILED for {hotels_data[index]['name']}: {hotels_data[index]['url']}")
+                hotels_data[index]["url"] = fixed_url  # Use fixed URL or empty string
+        
+        print(f"   [Discovery Agent] Verification complete.")
+        return hotels_data
         
     except Exception as e:
         print(f"   [Error] Gemini search failed: {e}")
@@ -191,12 +284,25 @@ Important:
             Important:
             - Only include real, currently operating hotels or resorts.
             - NEVER include healthcare facilities, nursing homes, or care centres.
+            - For golf resorts, provide the hotel URL, not the golf club URL.
             - Return a structured list of hotels.
             """
             
             response: DiscoveryResponse = structured_llm.invoke(fallback_prompt)
-            print(f"   [Fallback] Found {len(response.hotels)} hotels from knowledge base.")
-            return [hotel.model_dump() for hotel in response.hotels]
+            print(f"   [Fallback] Found {len(response.hotels)} hotels. Verifying URLs...")
+            
+            hotels_data = [hotel.model_dump() for hotel in response.hotels]
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                future_to_index = {executor.submit(verify_and_fix_url, h["url"]): i for i, h in enumerate(hotels_data)}
+                for future in concurrent.futures.as_completed(future_to_index):
+                    index = future_to_index[future]
+                    fixed_url = future.result()
+                    if not fixed_url:
+                        print(f"   [URL Check] FAILED for {hotels_data[index]['name']}: {hotels_data[index]['url']}")
+                    hotels_data[index]["url"] = fixed_url
+            
+            return hotels_data
         except Exception as e2:
             print(f"   [Error] Fallback also failed: {e2}")
             return []

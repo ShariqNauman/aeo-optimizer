@@ -9,3 +9,4 @@ langchain-openai
 fastapi
 uvicorn
 supabase
+requests
