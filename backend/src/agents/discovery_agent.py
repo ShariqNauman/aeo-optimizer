@@ -1,8 +1,8 @@
 import os
+import json
 from typing import List, Optional
 from pydantic import BaseModel, Field, AliasChoices
-from tavily import TavilyClient
-from src.llm import get_llm
+from src.llm import get_llm, get_search_llm
 
 class HotelDiscoveryResult(BaseModel):
     name: str = Field(description="The name of the hotel")
@@ -91,10 +91,10 @@ def validate_url(url: str) -> UrlValidation:
 
 def discover_hotels(user_query: str) -> List[dict]:
     """
-    Standalone agent that:
-    1. Searches for hotels based on user's natural language query using Tavily.
-    2. Parses the results using Gemini to extract hotel names and official URLs.
-    3. Returns a list of results.
+    Standalone agent that uses Gemini with Google Search grounding to:
+    1. Search the web for hotels matching the user's natural language query.
+    2. Extract hotel names and their official website URLs.
+    3. Returns a list of up to 10 hotel results.
     """
     print(f"\n>> [Discovery Agent] Searching for: {user_query}")
     
@@ -106,61 +106,91 @@ def discover_hotels(user_query: str) -> List[dict]:
         
     actual_query = validation.suggested_query if validation.suggested_query else user_query
     
-    tavily_api_key = os.getenv("TAVILY_API_KEY")
-    if not tavily_api_key:
-        print("   [Error] TAVILY_API_KEY is not set in .env")
-        return []
-
-    client = TavilyClient(api_key=tavily_api_key)
+    # 1. Use Gemini with Google Search grounding to find hotels
+    search_llm = get_search_llm()
     
-    # 1. Search Tavily
-    # We use 'search' for general results. We could also use 'context' or 'qna'.
-    search_query = f"official website of top hotels for: {user_query}"
-    print(f"   [Tavily] Executing search: {search_query}")
-    
-    search_results = client.search(
-        query=search_query,
-        search_depth="advanced",
-        max_results=10
-    )
-    
-    # 2. Parse with Gemini
-    print(f"   [Gemini] Parsing {len(search_results['results'])} search results...")
-    
-    structured_llm = get_llm().with_structured_output(DiscoveryResponse)
-    
-    prompt = f"""
-    You are an expert travel researcher. I will provide you with search results for a hotel query.
-    Your task is to extract the TOP 5 most relevant hotels from these results.
+    search_prompt = f"""Search the web and find the top 10 hotels that match this travel query: "{actual_query}"
 
-    User Query: {user_query}
+For each hotel, provide:
+1. The full official name of the hotel
+2. The official website URL (NOT booking sites like Expedia, Booking.com, or TripAdvisor - find the hotel's own website)
 
-    Search Results:
-    {search_results['results']}
+Format your response as a JSON array like this:
+[
+  {{"name": "Hotel Name", "url": "https://www.hotelwebsite.com"}},
+  ...
+]
 
-    Return the result in a strictly structured JSON format with the following keys:
-    - hotels: A list of objects, each containing:
-        - "name": The name of the hotel.
-        - "url": The OFFICIAL website URL of the hotel (avoid booking sites like Expedia, Booking.com, or TripAdvisor).
+Important:
+- Only include real, currently operating hotels
+- Make sure URLs are accurate and point to the hotel's official website
+- Include up to 10 results
+- Return ONLY the JSON array, nothing else"""
 
-    Example JSON output:
-    {{
-      "hotels": [
-        {{
-          "name": "Mandarin Oriental Kuala Lumpur",
-          "url": "https://www.mandarinoriental.com/kuala-lumpur"
-        }}
-      ]
-    }}
-    """
+    print(f"   [Gemini Search] Executing grounded search...")
     
     try:
-        response: DiscoveryResponse = structured_llm.invoke(prompt)
+        search_response = search_llm.invoke(search_prompt)
+        raw_text = search_response.content
+        print(f"   [Gemini Search] Got response, parsing results...")
+        
+        # 2. Parse the grounded search results with structured LLM
+        structured_llm = get_llm().with_structured_output(DiscoveryResponse)
+        
+        parse_prompt = f"""
+        You are an expert travel researcher. I will provide you with search results for a hotel query.
+        Your task is to extract the hotels from these results into a structured format.
+
+        User Query: {user_query}
+
+        Search Results:
+        {raw_text}
+
+        Return the result in a strictly structured JSON format with the following keys:
+        - hotels: A list of objects, each containing:
+            - "name": The name of the hotel.
+            - "url": The OFFICIAL website URL of the hotel (avoid booking sites like Expedia, Booking.com, or TripAdvisor).
+
+        Example JSON output:
+        {{
+          "hotels": [
+            {{
+              "name": "Mandarin Oriental Kuala Lumpur",
+              "url": "https://www.mandarinoriental.com/kuala-lumpur"
+            }}
+          ]
+        }}
+        """
+        
+        response: DiscoveryResponse = structured_llm.invoke(parse_prompt)
         print(f"   [Discovery Agent] Successfully found {len(response.hotels)} hotels.")
         return [hotel.model_dump() for hotel in response.hotels]
+        
     except Exception as e:
-        print(f"   [Error] Failed to parse discovery results: {e}")
-        return []
+        print(f"   [Error] Gemini search failed: {e}")
+        print(f"   [Fallback] Attempting direct structured search...")
+        
+        # Fallback: Try a simpler direct approach without grounding
+        try:
+            structured_llm = get_llm().with_structured_output(DiscoveryResponse)
+            
+            fallback_prompt = f"""
+            You are an expert travel researcher with deep knowledge of the global hotel industry.
+            Based on your knowledge, recommend the top 5 hotels that match this query: "{actual_query}"
+
+            For each hotel, provide:
+            - "name": The full official name of the hotel
+            - "url": The most likely official website URL
+
+            Return a structured list of hotels.
+            """
+            
+            response: DiscoveryResponse = structured_llm.invoke(fallback_prompt)
+            print(f"   [Fallback] Found {len(response.hotels)} hotels from knowledge base.")
+            return [hotel.model_dump() for hotel in response.hotels]
+        except Exception as e2:
+            print(f"   [Error] Fallback also failed: {e2}")
+            return []
 
 if __name__ == "__main__":
     # Test the agent

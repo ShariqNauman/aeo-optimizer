@@ -143,9 +143,8 @@ Our system utilizes a stateful **LangGraph** multi-agent pipeline orchestrated b
 * **LLM Integration:** LangChain (Interface for Google Gemini 3.1 Pro and other model providers)
 * **Real-time Communication:** WebSockets (Streaming agent updates to frontend)
 * **Search & Discovery:**
-    - **Tavily AI Search:** For deep hotel discovery and market research.
+    - **Google Gemini Search:** For deep hotel discovery and market research.
     - **Firecrawl:** For high-fidelity web scraping and content extraction.
-    - **DuckDuckGo Search:** For auxiliary information gathering.
 * **Database & Persistence:** Supabase (PostgreSQL) for archiving optimization records and simulation history.
 * **Environment:** Pydantic for robust data validation and schema enforcement.
 

@@ -6,7 +6,7 @@ Scrapes a given hotel website using Firecrawl to gather data.
 Mode:
   - Takes a specific hotel URL and scrapes it with targeted extraction
   - Crawls key subpages (rooms, dining, facilities) for comprehensive data
-  - Falls back to Tavily search if crawling fails
+  - Falls back to Gemini Search if crawling fails
 
 Returns raw text content + list of crawled source URLs.
 """
@@ -14,8 +14,8 @@ Returns raw text content + list of crawled source URLs.
 import os
 import re
 from firecrawl import FirecrawlApp
-from tavily import TavilyClient
 from src.state import AEOState
+from src.llm import get_search_llm
 
 
 # Max characters to extract per page (to avoid token overflow when sent to LLM)
@@ -209,50 +209,54 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str], dict]:
 
 def search_hotel_info(url: str) -> tuple[list[dict], list[str]]:
     """
-    Fallback: Use Tavily search to find information about the hotel if crawling fails.
-    Performs multiple targeted searches for comprehensive coverage.
+    Fallback: Use Gemini with Google Search grounding to find information about the hotel
+    if Firecrawl crawling fails.
     """
-    api_key = os.getenv("TAVILY_API_KEY")
-    if not api_key:
-        return [], []
-
     try:
-        client = TavilyClient(api_key=api_key)
-        print(f"   [Fallback] Searching for info about {url} using Tavily...")
+        search_llm = get_search_llm()
+        print(f"   [Fallback] Searching for info about {url} using Gemini Search...")
 
-        # Multiple targeted searches for better coverage
-        queries = [
-            f"hotel {url} rooms types prices amenities facilities",
-            f"hotel {url} restaurants dining options bars",
-            f"hotel {url} reviews rating location address contact",
-        ]
+        search_prompt = f"""Search the web and find detailed information about the hotel at this URL: {url}
 
-        scraped_pages = []
+I need comprehensive details including:
+1. Hotel name and full description
+2. Room types and pricing
+3. Amenities and facilities (pool, spa, gym, etc.)
+4. Restaurant and dining options
+5. Location details and address
+6. Guest reviews and ratings
+7. Contact information
+
+Provide all the information you can find. Include the source URLs where you found this information."""
+
+        response = search_llm.invoke(search_prompt)
+        content = response.content
+
+        # Extract grounding URLs from response metadata if available
         source_urls = []
-        seen_urls = set()
+        if hasattr(response, 'response_metadata'):
+            grounding = response.response_metadata.get('groundingMetadata', {})
+            chunks = grounding.get('groundingChunks', [])
+            for chunk in chunks:
+                web_info = chunk.get('web', {})
+                if web_info.get('uri'):
+                    source_urls.append(web_info['uri'])
 
-        for query in queries:
-            try:
-                results = client.search(query=query, search_depth="advanced", max_results=3)
-                for res in results.get('results', []):
-                    res_url = res.get('url', '')
-                    if res_url not in seen_urls:
-                        seen_urls.add(res_url)
-                        scraped_pages.append({
-                            "url": res_url,
-                            "title": res.get('title', ''),
-                            "snippet": res.get('content', ''),
-                            "content": res.get('content', ''),
-                        })
-                        source_urls.append(res_url)
-            except Exception as e:
-                print(f"   [Warning] Tavily query failed: {e}")
-                continue
+        # If no grounding URLs found, use the original URL
+        if not source_urls:
+            source_urls = [url]
 
-        print(f"   [Fallback] Found {len(scraped_pages)} results from Tavily")
+        scraped_pages = [{
+            "url": url,
+            "title": f"Hotel Information for {url}",
+            "snippet": content[:500],
+            "content": content,
+        }]
+
+        print(f"   [Fallback] Found {len(scraped_pages)} results from Gemini Search")
         return scraped_pages, source_urls
     except Exception as e:
-        print(f"   [Error] Fallback search failed: {e}")
+        print(f"   [Error] Gemini Search fallback failed: {e}")
         return [], []
 
 
