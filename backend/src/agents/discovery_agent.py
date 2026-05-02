@@ -109,7 +109,7 @@ def discover_hotels(user_query: str) -> List[dict]:
     # 1. Use Gemini with Google Search grounding to find hotels
     search_llm = get_search_llm()
     
-    search_prompt = f"""Search the web and find the top 10 hotels that match this travel query: "{actual_query}"
+    search_prompt = f"""Search the web and find the top 10 HOTELS, RESORTS, or LODGING ACCOMMODATIONS that match this travel query: "{actual_query}"
 
 For each hotel, provide:
 1. The full official name of the hotel
@@ -122,7 +122,10 @@ Format your response as a JSON array like this:
 ]
 
 Important:
-- Only include real, currently operating hotels
+- Only include real, currently operating hotels, resorts, inns, boutique stays, or serviced apartments
+- NEVER include healthcare facilities, nursing homes, assisted living centers, rehabilitation centres, hospitals, clinics, or any non-lodging business
+- NEVER include retirement homes, elder care facilities, or care homes
+- Every result MUST be a place where travellers can book overnight accommodation
 - Make sure URLs are accurate and point to the hotel's official website
 - Include up to 10 results
 - Return ONLY the JSON array, nothing else"""
@@ -151,6 +154,9 @@ Important:
             - "name": The name of the hotel.
             - "url": The OFFICIAL website URL of the hotel (avoid booking sites like Expedia, Booking.com, or TripAdvisor).
 
+        CRITICAL: Only include hotels, resorts, and lodging accommodations.
+        Exclude any result that is NOT a bookable overnight accommodation (e.g., healthcare, nursing homes, clinics, care homes).
+
         Example JSON output:
         {{
           "hotels": [
@@ -176,13 +182,16 @@ Important:
             
             fallback_prompt = f"""
             You are an expert travel researcher with deep knowledge of the global hotel industry.
-            Based on your knowledge, recommend the top 5 hotels that match this query: "{actual_query}"
+            Based on your knowledge, recommend the top 5 HOTELS or RESORTS that match this query: "{actual_query}"
 
             For each hotel, provide:
             - "name": The full official name of the hotel
             - "url": The most likely official website URL
 
-            Return a structured list of hotels.
+            Important:
+            - Only include real, currently operating hotels or resorts.
+            - NEVER include healthcare facilities, nursing homes, or care centres.
+            - Return a structured list of hotels.
             """
             
             response: DiscoveryResponse = structured_llm.invoke(fallback_prompt)
