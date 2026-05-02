@@ -1,33 +1,44 @@
-# Virtual environment
+# ── Virtual Environment ──────────────────────────
 venv/
 .venv/
 env/
-.env*
 
-# Python
+# ── Environment Variables (SECRETS) ─────────────
+.env
+.env.*
+!.env.example
+
+# ── Python ───────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.pytest_cache/
 
-# IDE
+# ── Node.js ──────────────────────────────────────
+node_modules/
+.next/
+out/
+.cache/
+
+# ── IDE ──────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
+# ── OS ───────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Distribution
+# ── Build Artifacts ──────────────────────────────
 dist/
 build/
 *.egg-info/
 
-node_modules
-.next
-.next/
-out/
-.cache/
+# ── Deployment ───────────────────────────────────
 .vercel
+.swc/
+
+# ── Gemini Agent ─────────────────────────────────
+.agents/

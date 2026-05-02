@@ -9,9 +9,7 @@ from src.agents.gap_analyzer import gap_analyzer
 from src.agents.optimizer import optimizer
 from src.agents.validator import validator
 from src.agents.resimulator import resimulator
-# Remaining stubs will be replaced in later phases.
-# Real agents: Web Researcher, Data Aggregation, AI Simulator, Gap Analyzer, Optimizer, Validator.
-# ──────────────────────────────────────────────────────────────────────
+
 
 def input_handler(state: AEOState) -> dict:
     """
@@ -24,10 +22,8 @@ def input_handler(state: AEOState) -> dict:
     return {}
 
 
-# ai_simulator and gap_analyzer are imported from src.agents above.
 
 
-# optimizer, validator, and resimulator are imported from src.agents above.
 
 def human_approval(state: AEOState) -> dict:
     """

@@ -1,6 +1,8 @@
 """
 AEO Optimizer - CLI Entry Point
 =================================
+Runs the full LangGraph pipeline in the terminal.
+
 Usage:
     python main.py
 """
@@ -14,8 +16,7 @@ from src.graph import build_graph
 
 def main():
     print("=" * 60)
-    print("  AEO Optimizer - Multi-Agent Pipeline")
-    print("  Phase 6: Re-simulator & Human-in-the-Loop")
+    print("  WeBoosta - AEO Multi-Agent Pipeline")
     print("=" * 60)
     
     # ── Step 1: Build the graph ──
