@@ -10,3 +10,4 @@ fastapi
 uvicorn
 supabase
 requests
+beautifulsoup4

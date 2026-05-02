@@ -10,11 +10,6 @@ outputs a new, optimized profile that resolves those weaknesses.
 from src.llm import get_llm
 from src.state import AEOState
 from src.agents.data_aggregation import HotelProfile
-from pydantic import BaseModel, Field
-
-class OptimizedHtmlOutput(BaseModel):
-    html: str = Field(description="The complete, optimized HTML string")
-
 
 
 def optimizer(state: AEOState) -> dict:
@@ -62,14 +57,15 @@ Only use what the original profile provides. Do NOT add new items to pass valida
 """
     prompt += """
 INSTRUCTIONS:
-1. Rewrite description, amenities, room_types, dining_options, and unique_selling_points to address every gap.
-2. You must ONLY refine, restructure, and enhance information that ALREADY EXISTS in the original profile.
-3. DO NOT invent new amenities, services, programs, or features that are not present in the original profile just to match the traveller's query. If the hotel does not have a specific feature, do not add it.
-4. You may reword, reorganize, and emphasize existing attributes for better machine readability and semantic clarity.
-5. Ensure the tone is natural and professional.
-6. Set structured_data_available to true.
+1. Rewrite description, amenities, room_types, dining_options, and unique_selling_points to address the gaps, BUT ONLY IF the original data contains the necessary facts to do so.
+2. CRITICAL RULE: YOU ARE A TEXT FORMATTER AND ENHANCER, NOT A CREATOR. You must ONLY refine, restructure, and emphasize information that ALREADY EXISTS in the original profile.
+3. ABSOLUTELY DO NOT invent, fabricate, or hallucinate new amenities, services, programs, prices, photos, locations, or features. 
+4. You are HIGHLY ENCOURAGED to RESTRUCTURE the existing data to be as specific and semantic as possible. For example, if a specific price is mentioned vaguely at the end of the text, move it to the explicit `price_range` field at the top. If amenities are scattered, group them logically. Turn vague marketing fluff into specific, data-rich details using ONLY the facts available.
+5. If a gap suggests adding something the hotel DOES NOT HAVE (e.g., adding a spa, a pool, a kids club, or a new photo), IGNORE THE GAP COMPLETELY. Do NOT add the feature. It is better to fail the gap than to lie.
+6. Ensure the tone is natural and professional.
+7. Set structured_data_available to true.
 
-HARD CONSTRAINT: Never fabricate or hallucinate information. Only work with what the original profile provides. Your job is to optimize presentation, not to create fiction.
+HARD CONSTRAINT: Never fabricate information. If the original profile does not explicitly state that the hotel has a specific service or feature, you are STRICTLY FORBIDDEN from adding it. Do not invent new restaurants, do not invent new room types, do not add fake photos or image URLs. Your job is strictly to optimize the presentation of existing facts.
 
 Required JSON fields: name, location, star_rating, description, amenities (list),
 room_types (list), dining_options (list), price_range, review_summary,
@@ -88,33 +84,8 @@ Respond with ONLY the JSON object."""
         optimized_profile = optimized.model_dump()
         print("   Optimization complete. Profile enhanced.")
         
-        # Now generate optimized HTML if we have raw HTML and SEO issues
+        # Removed HTML optimization as per user request to not optimize the HTML page.
         optimized_html = ""
-        if raw_html and seo_issues:
-            print("   [Agent 3: Optimizer] Generating SEO-optimized HTML...")
-            try:
-                html_prompt = f"""You are an expert SEO developer. Your task is to fix the following Lighthouse SEO issues in the provided HTML.
-                
-                LIGHTHOUSE ISSUES TO FIX:
-                {_format_seo_issues(seo_issues)}
-                
-                ORIGINAL HTML:
-                {raw_html[:10000]} # Truncated to fit context window
-                
-                INSTRUCTIONS:
-                1. Rewrite the HTML to fix the specified Lighthouse issues.
-                2. Ensure proper meta tags, heading hierarchy, link text, and accessibility attributes.
-                3. Keep the overall structure and design intact, only applying necessary SEO/Accessibility fixes.
-                4. Output the complete, valid HTML.
-                """
-                
-                html_llm = get_llm().with_structured_output(OptimizedHtmlOutput)
-                html_result = html_llm.invoke(html_prompt)
-                if html_result and html_result.html:
-                    optimized_html = html_result.html
-                    print("   [Agent 3: Optimizer] Optimized HTML generated.")
-            except Exception as e_html:
-                print(f"   [Warning] HTML optimization failed: {e_html}")
         
         return {
             "optimized_profile": optimized_profile,

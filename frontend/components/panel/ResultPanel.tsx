@@ -3,7 +3,7 @@
 import { StageData } from "@/types/stage";
 import { RadarChart } from "../charts/RadarChart";
 import { Button } from "../ui/Button";
-import { Database, TrendingUp, Save, CheckCircle2, ExternalLink } from "lucide-react";
+import { Database, TrendingUp, Save, CheckCircle2, ExternalLink, Bot, FileSearch, Image as ImageIcon, FileText, Copy, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useSessionStore } from "@/lib/store";
@@ -15,6 +15,21 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
   const { addRecord } = useSessionStore();
   const { user } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const aeo = content.aeo_results || {};
+  const semantics = aeo.semantic_analysis || {};
+  const altText = aeo.image_alt_text || {};
+  const agentTraffic = aeo.agent_traffic || {};
+  const seoSuggestions = content.seo_suggestions || [];
+
+  const handleCopy = () => {
+    if (agentTraffic.generated_llms_txt) {
+      navigator.clipboard.writeText(agentTraffic.generated_llms_txt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const breakdown = content.breakdown || {};
   const radarData = [
@@ -89,63 +104,140 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
     }
   };
 
-  const openOptimizedHtml = () => {
-    if (!content.optimized_html) return;
-    
-    // Create a blob URL from the HTML string and open it in a new tab
-    const blob = new Blob([content.optimized_html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <h4 className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold">Optimization Success</h4>
+      {/* 1. AI EVALUATION */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-accent" />
+              <h3 className="text-white font-heading text-xl font-bold tracking-wider">AI EVALUATION</h3>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-accent">Status</div>
+              <div className="text-white font-heading text-sm italic leading-none">{content.status || "Ready for Agents"}</div>
+            </div>
+          </div>
+          
           <div className="flex items-baseline gap-3">
-            <span className="text-6xl font-heading font-bold text-white leading-none">
+            <span className="text-7xl font-heading font-bold text-white leading-none tracking-tight">
               {content.finalScore || 74}
             </span>
-            <div className="flex items-center gap-1 text-green-500 font-bold text-sm">
-              <TrendingUp className="w-4 h-4" />
-              +{content.delta || 26}
+            <div className="flex items-center gap-1 text-green-500 font-bold text-lg">
+              <TrendingUp className="w-5 h-5" />
+              +{content.delta || 26} pts
             </div>
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-widest font-bold text-accent">Status</div>
-            <div className="text-white font-heading text-lg italic leading-none">{content.status || "Ready for Agents"}</div>
+        <div className="glass-card bg-white/5 border-white/10 p-4">
+          <RadarChart data={radarData} />
+        </div>
+
+        <div className="p-5 bg-white/5 border border-white/10 rounded-xl flex items-start gap-3">
+          <Bot className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <p className="text-sm text-white/80 font-body leading-relaxed whitespace-pre-line">
+            {content.resim_feedback || "The optimized profile significantly improves your visibility to AI agents and generative search engines."}
+          </p>
+        </div>
+      </div>
+
+      {/* 2. AEO ANALYSIS */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <h3 className="text-white font-heading text-xl font-bold tracking-wider mb-4">AEO ANALYSIS</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Semantic Word Choice */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col space-y-3">
+            <div className="flex items-center gap-2">
+              <FileSearch className="w-4 h-4 text-blue-400" />
+              <h4 className="text-white/70 text-xs font-bold uppercase tracking-widest">Semantic Density</h4>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className={`text-4xl font-heading font-bold ${
+                semantics.density_score >= 80 ? "text-green-400" :
+                semantics.density_score >= 50 ? "text-yellow-400" : "text-red-400"
+              }`}>
+                {semantics.density_score || 0}
+              </span>
+              <p className="text-xs text-white/50 leading-relaxed">
+                {semantics.details_specificity || "Optimized semantic specificity."}
+              </p>
+            </div>
+          </div>
+
+          {/* Image Alt Text */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col space-y-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-purple-400" />
+              <h4 className="text-white/70 text-xs font-bold uppercase tracking-widest">Image Alt Text</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="flex flex-col items-center p-2 bg-black/20 rounded">
+                <span className="text-green-400 font-bold text-xl">{altText.good_alt ?? 0}</span>
+                <span className="text-[10px] text-white/40 uppercase tracking-widest">Good</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-black/20 rounded">
+                <span className="text-red-400 font-bold text-xl">{altText.missing_alt ?? 0}</span>
+                <span className="text-[10px] text-white/40 uppercase tracking-widest">Missing</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-black/20 rounded">
+                <span className="text-yellow-400 font-bold text-xl">{altText.generic_alt ?? 0}</span>
+                <span className="text-[10px] text-white/40 uppercase tracking-widest">Generic</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Agent Traffic (llms.txt) */}
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden mt-4">
+          <div className="p-4 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-emerald-400" />
+              <h4 className="text-white/70 text-xs font-bold uppercase tracking-widest">Optimized llms.txt</h4>
+            </div>
+            <div className="flex items-center gap-1 bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full border border-green-500/30">
+              <CheckCircle2 className="w-3 h-3" /> Ready for Deployment
+            </div>
+          </div>
+          <div className="p-4 bg-black/40">
+            <div className="relative group">
+              <button
+                onClick={handleCopy}
+                className="absolute top-2 right-2 p-2 bg-white/10 hover:bg-white/20 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Copy to clipboard"
+              >
+                {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+              <pre className="text-[10px] sm:text-xs font-mono text-white/70 bg-black/60 p-4 rounded-lg overflow-x-auto max-h-60 border border-white/5 custom-scrollbar relative">
+                {agentTraffic.generated_llms_txt || "Generating..."}
+              </pre>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="glass-card bg-white/5 border-white/10 p-4">
-        <RadarChart data={radarData} />
-      </div>
-
-      <div className="p-6 bg-accent/10 border border-accent/20 rounded-2xl">
-        <p className="text-sm text-white/80 font-body leading-relaxed text-center italic">
-          "{content.resim_feedback || "The optimized profile significantly improves your visibility to AI agents and generative search engines."}"
-        </p>
-      </div>
-
-      {content.optimized_html && (
-        <div className="pt-4">
-          <Button
-            onClick={openOptimizedHtml}
-            variant="outline"
-            className="w-full py-6 text-lg group bg-white/5 hover:bg-white/10 border-white/20"
-          >
-            <span className="flex items-center gap-2">
-              View SEO-Optimized Live Preview
-              <ExternalLink className="w-5 h-5 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Button>
+      {/* 3. SEO SECTION */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <h3 className="text-white font-heading text-xl font-bold tracking-wider mb-4">SEO SUGGESTIONS</h3>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          {seoSuggestions.length > 0 ? (
+            <ul className="space-y-3">
+              {seoSuggestions.map((suggestion: string, idx: number) => (
+                <li key={idx} className="flex gap-3 items-start">
+                  <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <p className="text-sm text-white/80 leading-relaxed font-body">
+                    {suggestion}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-white/60">No major SEO lighthouse issues to fix.</p>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="pt-6">
         <Button

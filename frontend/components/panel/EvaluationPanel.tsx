@@ -4,11 +4,13 @@ import { RadarChart } from "../charts/RadarChart";
 import { StageData } from "@/types/stage";
 import { AlertCircle, CheckCircle2, Bot } from "lucide-react";
 import { SeoPanel } from "./SeoPanel";
+import { AeoPanel } from "./AeoPanel";
 
 export const EvaluationPanel = ({ data }: { data: StageData }) => {
   const { content } = data.details;
   const breakdown = content.breakdown || {};
   
+  const seoScore = content.scores?.seo || 0;
   const radarData = [
     { criterion: "Relevance", score: breakdown.relevance || 0, fullMark: 20 },
     { criterion: "Completeness", score: breakdown.completeness || 0, fullMark: 20 },
@@ -19,35 +21,47 @@ export const EvaluationPanel = ({ data }: { data: StageData }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex items-end gap-4">
-        <span className="text-7xl font-heading font-bold text-white leading-none">
-          {content.score || 0}
-        </span>
-        <span className="text-xl text-white/40 font-heading mb-2">/ 100</span>
-      </div>
+      {content.score !== null && (
+        <>
+          <div className="flex items-end gap-4">
+            <span className="text-7xl font-heading font-bold text-white leading-none">
+              {content.score || 0}
+            </span>
+            <span className="text-xl text-white/40 font-heading mb-2">/ 100</span>
+          </div>
 
-      <div className="glass-card bg-white/5 border-white/10 p-4">
-        <RadarChart data={radarData} />
-      </div>
+          <div className="glass-card bg-white/5 border-white/10 p-4">
+            <RadarChart data={radarData} />
+          </div>
 
-      <div className="space-y-4">
-        <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">
-          AI Reasoning
-        </h4>
-        <div className="p-5 bg-white/5 border border-white/10 rounded-xl flex items-start gap-3">
-          <Bot className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-          <p className="text-sm text-white/80 font-body leading-relaxed whitespace-pre-line">
-            {content.reasoning || "No reasoning provided."}
-          </p>
+          <div className="space-y-4">
+            <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">
+              AI Reasoning
+            </h4>
+            <div className="p-5 bg-white/5 border border-white/10 rounded-xl flex items-start gap-3">
+              <Bot className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+              <p className="text-sm text-white/80 font-body leading-relaxed whitespace-pre-line">
+                {content.reasoning || "No reasoning provided."}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {content.aeo_results && (
+        <div className="pt-4 border-t border-white/10 mt-6">
+          <AeoPanel data={data} />
         </div>
-      </div>
+      )}
 
-      <div className="space-y-4 pt-4 border-t border-white/10">
-        <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">
-          SEO & Lighthouse Audit
-        </h4>
-        <SeoPanel data={data} />
-      </div>
+      {content.scores && (
+        <div className="space-y-4 pt-4 border-t border-white/10 mt-6">
+          <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">
+            SEO & Lighthouse Audit
+          </h4>
+          <SeoPanel data={data} />
+        </div>
+      )}
     </div>
   );
 };

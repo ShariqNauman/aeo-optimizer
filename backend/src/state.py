@@ -29,6 +29,8 @@ class AEOState(TypedDict, total=False):
     seo_issues: list              # Failed Lighthouse audits with details
     performance_metrics: dict     # {lcp: "1.2s", fcp: "0.8s", ...}
 
+    # ── Agent 1.75: AEO Analyzer output ────────────────────────────────
+    aeo_results: dict             # AEO checks (image alt, llms.txt, semantics)
     
     # ── Agent 2: AI Decision Simulator output ──────────────────────────
     evaluation_score: int         # Overall score 0-100

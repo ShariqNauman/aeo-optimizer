@@ -74,24 +74,26 @@ export const simulatePipeline = (
             },
           },
         };
-      } else if (agentName === "seo_analyzer") {
-        // Wait for ai_simulator to emit evaluation stage
-        stageData = null;
-      } else if (agentName === "ai_simulator") {
+      } else if (agentName === "seo_analyzer" || agentName === "aeo_analyzer" || agentName === "ai_simulator") {
+        let previewText = "Analyzing SEO & Performance...";
+        if (agentName === "aeo_analyzer") previewText = "Running AEO Audit...";
+        if (agentName === "ai_simulator") previewText = `Score: ${data.evaluation_score || 0} / 100`;
+
         stageData = {
           stage: "evaluation",
-          title: "AI Evaluation",
-          preview: `Score: ${data.evaluation_score} / 100`,
+          title: "AI & AEO Evaluation",
+          preview: previewText,
           details: {
             query,
             hotel,
             content: {
-              score: data.evaluation_score,
-              reasoning: data.evaluation_reasoning,
+              score: data.evaluation_score ?? null,
+              reasoning: data.evaluation_reasoning || null,
               breakdown: data.sub_scores || {},
-              scores: data.seo_scores || {},
+              scores: data.seo_scores || null,
               issues: data.seo_issues || [],
               performance_metrics: data.performance_metrics || {},
+              aeo_results: data.aeo_results || null,
             },
           },
         };
@@ -143,7 +145,7 @@ export const simulatePipeline = (
         stageData = {
           stage: "result",
           title: "Final Result",
-          preview: `+${data.score_delta} Improvement`,
+          preview: `Optimization Complete`,
           details: {
             query,
             hotel,
@@ -154,6 +156,8 @@ export const simulatePipeline = (
               resim_feedback: data.resim_feedback,
               breakdown: data.sub_scores || {},
               optimized_html: data.optimized_html || "",
+              seo_suggestions: data.seo_suggestions || [],
+              aeo_results: data.aeo_results || {},
             },
           },
         };
@@ -188,18 +192,25 @@ export const simulatePipeline = (
   };
 
   ws.onerror = (error) => {
-    // React StrictMode might close the connection immediately on mount/unmount.
-    // If the socket is closing or closed, ignore the error.
     if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
       return;
     }
     console.error("WebSocket Error: ", error);
     
-    // Auto-fallback to mock if connection fails and not explicitly disabled
-    if (process.env.NEXT_PUBLIC_AUTO_MOCK !== "false") {
-      console.warn("Falling back to mock simulation...");
-      simulateMockPipeline(query, hotel, onStageComplete);
-    }
+    // Create an error stage to show in the UI instead of falling back to mock data
+    onStageComplete({
+      stage: "original",
+      title: "Connection Error",
+      preview: "WebSocket Disconnected",
+      details: {
+        query,
+        hotel,
+        content: {
+          description: "The connection to the optimization server was lost.",
+          status: "Error",
+        }
+      }
+    });
   };
 
   return ws;

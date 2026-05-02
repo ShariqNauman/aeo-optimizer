@@ -73,14 +73,13 @@ export const SeoPanel = ({ data }: SeoPanelProps) => {
         {issues.length > 0 ? (
           <ul className="space-y-4">
             {issues.map((issue: any, i: number) => (
-              <li key={i} className="flex flex-col gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl font-body">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-xs text-red-400 font-bold tracking-wider">{issue.title}</span>
+              <li key={i} className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/20 rounded-lg font-body">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span className="text-sm text-red-400 font-bold">{issue.title}</span>
                 </div>
-                <p className="text-sm text-white/80">{issue.description}</p>
-                <div className="mt-2 text-[10px] text-white/40 uppercase tracking-widest">
-                  Category: {issue.category} | ID: {issue.id}
+                <div className="text-[10px] text-white/40 uppercase tracking-widest whitespace-nowrap ml-4">
+                  {issue.category}
                 </div>
               </li>
             ))}

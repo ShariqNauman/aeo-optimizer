@@ -9,7 +9,12 @@ the optimized_profile. Calculates the score difference.
 
 from src.state import AEOState
 from src.agents.ai_simulator import SimulationResult
+from src.agents.aeo_analyzer import analyze_semantics_and_specificity
 from src.llm import get_llm
+from pydantic import BaseModel, Field
+
+class SeoSuggestionsOutput(BaseModel):
+    suggestions: list[str] = Field(description="List of actionable, non-fabricated SEO suggestions.")
 
 def resimulator(state: AEOState) -> dict:
     """
@@ -20,6 +25,7 @@ def resimulator(state: AEOState) -> dict:
     optimized_profile = state.get("optimized_profile", {})
     query = state.get("traveller_query", "")
     original_score = state.get("evaluation_score", 0)
+    seo_issues = state.get("seo_issues", [])
     
     print("\n>> [Agent 5: Re-simulator] Re-evaluating optimized profile...")
     
@@ -46,6 +52,12 @@ Score the profile strictly out of 100 based on these 5 criteria (each 0-20):
 3. Trust Signals (0-20)
 4. Value Proposition (0-20)
 5. Structured Data Quality (0-20)
+
+BE EXTREMELY CRITICAL. Most hotel profiles are full of marketing fluff.
+A score of 90+ means a world-class, perfect profile with rich schema and zero flaws. 
+A score of 50-60 is an AVERAGE hotel profile.
+Assess how the OPTIMIZED profile improves over a standard profile.
+The overall_score MUST equal the sum of the 5 sub-scores.
 
 Required JSON fields:
 {{
@@ -77,11 +89,43 @@ Respond with ONLY the JSON object."""
         if not result.would_recommend:
             print("   [Warning] The AI still wouldn't recommend this hotel.")
             
+        seo_suggestions = []
+        if seo_issues:
+            print("   [Agent 5: Re-simulator] Generating SEO suggestions from initial issues...")
+            try:
+                seo_prompt = f"""You are an SEO expert reviewing Lighthouse issues.
+Your job is to provide actionable suggestions on how a developer can fix these issues.
+DO NOT fabricate any issues. ONLY base your suggestions on the issues provided below.
+DO NOT suggest modifying any hotel content or fabricating features. Only suggest technical web development fixes.
+
+ISSUES FOUND:
+{_format_seo_issues(seo_issues)}
+
+Return a list of clear, concise, actionable suggestions (1-2 sentences each)."""
+                
+                seo_llm = get_llm().with_structured_output(SeoSuggestionsOutput)
+                seo_result = seo_llm.invoke(seo_prompt)
+                if seo_result and seo_result.suggestions:
+                    seo_suggestions = seo_result.suggestions
+            except Exception as e:
+                print(f"   [Error] Generating SEO suggestions failed: {e}")
+                seo_suggestions = [f"Fix {issue.get('title')}: {issue.get('description')}" for issue in seo_issues]
+
+        print("   [Agent 5: Re-simulator] Re-analyzing Semantic Word Choice for AEO...")
+        new_semantics = analyze_semantics_and_specificity(optimized_profile)
+        
+        # We also need to get the old aeo_results to merge our new semantics into
+        old_aeo = state.get("aeo_results", {})
+        new_aeo_results = dict(old_aeo)
+        new_aeo_results["semantic_analysis"] = new_semantics
+
         return {
             "resim_score": result.overall_score,
             "resim_feedback": result.reasoning,
             "score_delta": score_delta,
             "sub_scores": result.sub_scores.model_dump(),
+            "seo_suggestions": seo_suggestions,
+            "aeo_results": new_aeo_results
         }
         
     except Exception as e:
@@ -89,8 +133,17 @@ Respond with ONLY the JSON object."""
         return {
             "resim_score": original_score, 
             "score_delta": 0,
-            "sub_scores": state.get("sub_scores", {})
+            "sub_scores": state.get("sub_scores", {}),
+            "seo_suggestions": []
         }
+
+def _format_seo_issues(issues: list[dict]) -> str:
+    if not issues:
+        return "None"
+    lines = []
+    for i, issue in enumerate(issues, 1):
+        lines.append(f"{i}. [{issue.get('category')}] {issue.get('title')}: {issue.get('description')}")
+    return "\n".join(lines)
 
 
 def _format_profile(profile: dict) -> str:

@@ -56,6 +56,11 @@ export const getMockStageData = (query: string, hotel: string): Record<Stage, St
             tbt: "450 ms",
             speed_index: "4.5 s"
           },
+          aeo_results: {
+            image_alt_text: { missing_alt: 2, generic_alt: 1, good_alt: 5, issues: ["Missing alt on logo.png"] },
+            agent_traffic: { llms_txt_exists: false, generated_llms_txt: "# Hotel Name\n\n## USPs\n- Mock USP" },
+            semantic_analysis: { vague_phrases: ["world-class"], density_score: 65, details_specificity: "Some vague terms found." }
+          },
           issues: [
             {
               id: "meta-description",

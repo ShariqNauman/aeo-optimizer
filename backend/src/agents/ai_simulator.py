@@ -88,7 +88,15 @@ EVALUATION CRITERIA (each scored 0-20, totalling 0-100):
 4. Value Proposition (0-20): Unique selling points, amenities, differentiation.
 5. Structured Data Quality (0-20): Is the data well-organized for machine consumption?
 
-Be critical and realistic. 60-70 is average. 80+ is excellent.
+BE EXTREMELY CRITICAL. Most hotel profiles are full of marketing fluff.
+A score of 90+ means a world-class, perfect profile with rich schema and zero flaws. 
+A score of 50-60 is an AVERAGE hotel profile.
+Deduct points heavily for:
+- Missing structured data (schema.org)
+- Vague marketing fluff (e.g. "luxurious", "world-class") instead of specific details
+- Lack of clear pricing, exact amenities, or unique selling points
+- Generic image alt texts
+
 The overall_score MUST equal the sum of the 5 sub-scores.
 
 Required JSON fields:
