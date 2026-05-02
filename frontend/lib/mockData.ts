@@ -46,7 +46,15 @@ export const getMockStageData = (query: string, hotel: string): Record<Stage, St
           scores: {
             seo: 65,
             accessibility: 72,
-            best_practices: 60
+            best_practices: 60,
+            performance: 45
+          },
+          performance_metrics: {
+            lcp: "3.2 s",
+            fcp: "1.8 s",
+            cls: "0.15",
+            tbt: "450 ms",
+            speed_index: "4.5 s"
           },
           issues: [
             {

@@ -91,6 +91,7 @@ export const simulatePipeline = (
               breakdown: data.sub_scores || {},
               scores: data.seo_scores || {},
               issues: data.seo_issues || [],
+              performance_metrics: data.performance_metrics || {},
             },
           },
         };

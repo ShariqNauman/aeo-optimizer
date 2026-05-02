@@ -34,7 +34,7 @@ def seo_analyzer(state: AEOState) -> dict:
     psi_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     params = {
         "url": url,
-        "category": ["seo", "accessibility", "best-practices"]
+        "category": ["seo", "accessibility", "best-practices", "performance"]
     }
     if api_key:
         params["key"] = api_key
@@ -62,11 +62,20 @@ def seo_analyzer(state: AEOState) -> dict:
             "seo": int(categories.get("seo", {}).get("score", 0) * 100),
             "accessibility": int(categories.get("accessibility", {}).get("score", 0) * 100),
             "best_practices": int(categories.get("best-practices", {}).get("score", 0) * 100),
+            "performance": int(categories.get("performance", {}).get("score", 0) * 100),
         }
         
-        print(f"   [Scores] SEO: {seo_scores['seo']} | Accessibility: {seo_scores['accessibility']} | Best Practices: {seo_scores['best_practices']}")
+        print(f"   [Scores] SEO: {seo_scores['seo']} | Accessibility: {seo_scores['accessibility']} | Best Practices: {seo_scores['best_practices']} | Performance: {seo_scores['performance']}")
         
-        # Extract failed audits
+        # Extract performance metrics
+        audits = lighthouse_res.get("audits", {})
+        performance_metrics = {
+            "lcp": audits.get("largest-contentful-paint", {}).get("displayValue", "N/A"),
+            "fcp": audits.get("first-contentful-paint", {}).get("displayValue", "N/A"),
+            "cls": audits.get("cumulative-layout-shift", {}).get("displayValue", "N/A"),
+            "tbt": audits.get("total-blocking-time", {}).get("displayValue", "N/A"),
+            "speed_index": audits.get("speed-index", {}).get("displayValue", "N/A"),
+        }
         audits = lighthouse_res.get("audits", {})
         seo_issues = []
         
@@ -93,7 +102,8 @@ def seo_analyzer(state: AEOState) -> dict:
         
         return {
             "seo_scores": seo_scores,
-            "seo_issues": seo_issues
+            "seo_issues": seo_issues,
+            "performance_metrics": performance_metrics
         }
         
     except Exception as e:
@@ -102,7 +112,11 @@ def seo_analyzer(state: AEOState) -> dict:
             "seo_scores": {
                 "seo": 0,
                 "accessibility": 0,
-                "best_practices": 0
+                "best_practices": 0,
+                "performance": 0
+            },
+            "performance_metrics": {
+                "lcp": "N/A", "fcp": "N/A", "cls": "N/A", "tbt": "N/A", "speed_index": "N/A"
             },
             "seo_issues": [
                 {

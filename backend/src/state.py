@@ -27,6 +27,7 @@ class AEOState(TypedDict, total=False):
     # ── Agent 1.5: SEO Analyzer output ─────────────────────────────────
     seo_scores: dict              # {seo: 85, accessibility: 89, best_practices: 81}
     seo_issues: list              # Failed Lighthouse audits with details
+    performance_metrics: dict     # {lcp: "1.2s", fcp: "0.8s", ...}
 
     
     # ── Agent 2: AI Decision Simulator output ──────────────────────────
