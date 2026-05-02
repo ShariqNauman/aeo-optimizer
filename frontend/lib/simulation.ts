@@ -107,6 +107,7 @@ export const simulatePipeline = (
             hotel,
             content: {
               gaps: data.gaps || [],
+              seo_issues: data.seo_issues || [],
             },
           },
         };
@@ -152,7 +153,7 @@ export const simulatePipeline = (
             content: {
               finalScore: data.resim_score,
               delta: data.score_delta,
-              status: data.resim_feedback || "Ready for deployment",
+              status: "Ready for deployment",
               resim_feedback: data.resim_feedback,
               breakdown: data.sub_scores || {},
               optimized_html: data.optimized_html || "",

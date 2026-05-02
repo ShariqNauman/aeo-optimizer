@@ -147,7 +147,7 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       <div className="space-y-4 pt-4 border-t border-white/10">
         <h3 className="text-white font-heading text-xl font-bold tracking-wider mb-4">AEO ANALYSIS</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-4">
           {/* Semantic Word Choice */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col space-y-3">
             <div className="flex items-center gap-2">

@@ -9,7 +9,7 @@ the optimized_profile. Calculates the score difference.
 
 from src.state import AEOState
 from src.agents.ai_simulator import SimulationResult
-from src.agents.aeo_analyzer import analyze_semantics_and_specificity
+from src.agents.aeo_analyzer import analyze_semantics_and_specificity, analyze_image_alt_text
 from src.llm import get_llm
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,8 @@ def resimulator(state: AEOState) -> dict:
     query = state.get("traveller_query", "")
     original_score = state.get("evaluation_score", 0)
     seo_issues = state.get("seo_issues", [])
+    optimized_html = state.get("optimized_html", "")
+    raw_html = state.get("raw_html", "")
     
     print("\n>> [Agent 5: Re-simulator] Re-evaluating optimized profile...")
     
@@ -114,10 +116,21 @@ Return a list of clear, concise, actionable suggestions (1-2 sentences each)."""
         print("   [Agent 5: Re-simulator] Re-analyzing Semantic Word Choice for AEO...")
         new_semantics = analyze_semantics_and_specificity(optimized_profile)
         
+        # Re-analyze image alt text on the optimized HTML (or fall back to raw HTML)
+        html_to_analyze = optimized_html if optimized_html else raw_html
+        if html_to_analyze:
+            print("   [Agent 5: Re-simulator] Re-analyzing Image Alt Text on optimized HTML...")
+            new_image_analysis = analyze_image_alt_text(html_to_analyze)
+        else:
+            print("   [Agent 5: Re-simulator] No HTML available for image alt text re-analysis.")
+            new_image_analysis = None
+        
         # We also need to get the old aeo_results to merge our new semantics into
         old_aeo = state.get("aeo_results", {})
         new_aeo_results = dict(old_aeo)
         new_aeo_results["semantic_analysis"] = new_semantics
+        if new_image_analysis is not None:
+            new_aeo_results["image_alt_text"] = new_image_analysis
 
         return {
             "resim_score": result.overall_score,

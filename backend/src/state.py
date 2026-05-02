@@ -52,7 +52,9 @@ class AEOState(TypedDict, total=False):
     # ── Agent 5: Re-simulation Agent output ────────────────────────────
     resim_score: int              # Score after optimization
     resim_reasoning: str          # Reasoning for the new score
+    resim_feedback: str           # Detailed reasoning for the new score
     score_delta: int              # resim_score - evaluation_score
+    seo_suggestions: list         # Actionable SEO suggestions from Lighthouse issues
     
     # ── HITL: Human-in-the-Loop ────────────────────────────────────────
     human_approved: bool          # Did the human approve the optimization?

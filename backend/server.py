@@ -141,6 +141,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "sources": final_accumulated_state.get("sources", []),
                 "seo_scores": final_accumulated_state.get("seo_scores", {}),
                 "seo_issues": final_accumulated_state.get("seo_issues", []),
+                "seo_suggestions": final_accumulated_state.get("seo_suggestions", []),
                 "performance_metrics": final_accumulated_state.get("performance_metrics", {}),
                 "aeo_results": final_accumulated_state.get("aeo_results", {}),
                 "optimized_html": final_accumulated_state.get("optimized_html", ""),

@@ -4,7 +4,7 @@ import { Stage, StageData } from "@/types/stage";
 import { EvaluationPanel } from "./EvaluationPanel";
 import { OptimizationPanel } from "./OptimizationPanel";
 import { ResultPanel } from "./ResultPanel";
-import { X, Info, CheckCircle2 } from "lucide-react";
+import { X, Info, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface DetailPanelProps {
   stage: Stage | null;
@@ -101,6 +101,31 @@ export const DetailPanel = ({ stage, data, onClose, onApprove }: DetailPanelProp
                   <span className="text-white/40 text-sm italic">No gaps identified.</span>
                 )}
               </ul>
+            </div>
+
+            {/* SEO Lighthouse Issues */}
+            <div className="space-y-4 pt-4 border-t border-white/10">
+              <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">Lighthouse Issues</h4>
+              {data.details.content.seo_issues && data.details.content.seo_issues.length > 0 ? (
+                <ul className="space-y-4">
+                  {data.details.content.seo_issues.map((issue: any, i: number) => (
+                    <li key={i} className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/20 rounded-lg font-body">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        <span className="text-sm text-red-400 font-bold">{issue.title}</span>
+                      </div>
+                      <div className="text-[10px] text-white/40 uppercase tracking-widest whitespace-nowrap ml-4">
+                        {issue.category}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  <span className="text-green-400 font-body text-sm">No critical Lighthouse issues found!</span>
+                </div>
+              )}
             </div>
           </div>
         );
