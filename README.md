@@ -58,7 +58,7 @@ Instead of guessing what an AI wants, WeBoosta **simulates** the AI. We evaluate
 ### ⚙️ How the WeBoosta Pipeline Works:
 Our system utilizes a stateful **LangGraph** multi-agent pipeline orchestrated by **Gemini 3.1** across sequential stages:
 
-1. 🔍 **Discovery & Intelligence**: Validates natural language queries and discovers candidate hotels using AI-powered search (Tavily) to find official digital footprints.
+1. 🔍 **Discovery & Intelligence**: Validates natural language queries and discovers candidate hotels using AI-powered search (Google Gemini Search) to find official digital footprints.
 2. 📥 **Web Research & Extraction**: Crawls the selected hotel's entire website using **Firecrawl** to ingest raw, unstructured data.
 3. 🗂️ **Data Aggregation**: Synthesizes fragmented content into a cohesive, structured profile using Gemini's large-context processing.
 4. 🤖 **AI Decision Simulator**: Simulates an actual AI travel agent evaluating the property against the user's specific query to calculate an initial "Selection Score".
@@ -150,4 +150,4 @@ Our system utilizes a stateful **LangGraph** multi-agent pipeline orchestrated b
 
 ---
 
-*Documentation regarding Quality Assurance & Testing Deployment (QATD) will be available in the repository.*
+*Documentation regarding Refined Quality Assurance & Testing Deployment (QATD) will be available in the repository.*
