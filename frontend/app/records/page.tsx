@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecordsTable } from "@/components/ui/RecordsTable";
 import { RecordsGrid } from "@/components/ui/RecordsGrid";
-import { Download, Database, Filter, LayoutGrid, List, Search, X, Loader2 } from "lucide-react";
+import { Download, Database, Filter, LayoutGrid, List, Search, X, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import { RecordEntry } from "@/lib/mockRecords";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 export default function RecordsPage() {
   const [records, setRecords] = useState<RecordEntry[]>([]);
@@ -15,14 +17,30 @@ export default function RecordsPage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { user, loading: authLoading, isAdmin } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
+    if (authLoading) return; // Wait for auth to resolve
+    
+    if (!user) {
+      setLoading(false);
+      return; // No user = no records to fetch
+    }
+
     const fetchRecords = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('optimization_records')
           .select('*')
           .order('created_at', { ascending: false });
+
+        // Admin sees all records; regular users only see their own
+        if (!isAdmin) {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -49,7 +67,7 @@ export default function RecordsPage() {
     };
 
     fetchRecords();
-  }, []);
+  }, [user, authLoading, isAdmin]);
 
   const filteredRecords = records.filter(record =>
     record.query.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,6 +109,32 @@ export default function RecordsPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  if (!authLoading && !user) {
+    return (
+      <main className="min-h-screen bg-background text-text flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center space-y-6 max-w-md"
+        >
+          <div className="w-20 h-20 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto">
+            <Lock className="w-8 h-8 text-accent" />
+          </div>
+          <h2 className="font-heading text-3xl font-bold text-primary">Sign In Required</h2>
+          <p className="text-secondary/60 font-body">
+            Sign in to access your optimization records. Each user&apos;s data is private and isolated.
+          </p>
+          <button
+            onClick={() => router.push("/auth?redirect=/records")}
+            className="px-8 py-3 bg-accent text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-accent/90 transition-all"
+          >
+            Sign In
+          </button>
+        </motion.div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background text-text pb-24">

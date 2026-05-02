@@ -166,6 +166,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # ── Explicit Save Endpoint ─────────────────────────────────────────────
 
 class SaveRecordRequest(BaseModel):
+    user_id: str = ""
     traveller_query: str = ""
     hotel_url: str = ""
     hotel_name: str = "Unknown"
@@ -186,6 +187,7 @@ async def save_record(request: SaveRecordRequest):
     try:
         print(f">> [API] Save record request received for: {request.hotel_url}")
         record = {
+            "user_id": request.user_id or None,
             "query": request.traveller_query,
             "hotel_url": request.hotel_url,
             "hotel_name": request.hotel_name,

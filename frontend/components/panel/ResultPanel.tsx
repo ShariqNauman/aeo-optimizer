@@ -7,11 +7,13 @@ import { Database, TrendingUp, Save, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useSessionStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 
 
 export const ResultPanel = ({ data }: { data: StageData }) => {
   const { content, query, hotel } = data.details;
   const { addRecord } = useSessionStore();
+  const { user } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
 
   const breakdown = content.breakdown || {};
@@ -35,6 +37,9 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
       const finalState = finalStateStr ? JSON.parse(finalStateStr) : null;
 
       if (finalState) {
+        // Inject the authenticated user's ID into the save payload
+        const savePayload = { ...finalState, user_id: user?.id || "" };
+        
         // Call backend API to save to Supabase
         let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
         if (!backendUrl.startsWith("http")) {
@@ -45,7 +50,7 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
         const response = await fetch(`${cleanBackendUrl}/api/save_record`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(finalState),
+          body: JSON.stringify(savePayload),
         });
         
         const result = await response.json();
