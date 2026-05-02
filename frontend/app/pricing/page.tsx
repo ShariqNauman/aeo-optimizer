@@ -18,8 +18,8 @@ const PLANS = [
     id: "starter" as const,
     name: "Starter",
     tagline: "For hotels getting started with AEO",
-    price: 0,
-    priceLabel: "Free",
+    price: 350,
+    priceLabel: "RM350",
     icon: Zap,
     color: "accent",
     popular: false,
@@ -37,8 +37,8 @@ const PLANS = [
     id: "growth" as const,
     name: "Growth",
     tagline: "For hotels scaling their AI visibility",
-    price: 49,
-    priceLabel: "$49",
+    price: 600,
+    priceLabel: "RM600",
     icon: Rocket,
     color: "accent",
     popular: true,
@@ -56,12 +56,13 @@ const PLANS = [
     id: "enterprise" as const,
     name: "Enterprise",
     tagline: "For hotel chains dominating AI search",
-    price: 149,
-    priceLabel: "$149",
+    price: 1000,
+    priceLabel: "RM1000+",
     icon: Crown,
     color: "accent",
     popular: false,
     features: [
+      { name: "Contact us for enterprise pricing", included: true },
       { name: "Unlimited optimizations", included: true },
       { name: "Full pipeline + priority", included: true },
       { name: "Unlimited record retention", included: true },
@@ -130,11 +131,10 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.1 }}
-              className={`relative flex flex-col bg-white border rounded-[2rem] overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer group ${
-                plan.popular
-                  ? "border-accent/30 shadow-xl shadow-accent/10 scale-[1.02]"
-                  : "border-[#E7E5E4] shadow-lg shadow-[#1C1917]/5"
-              }`}
+              className={`relative flex flex-col bg-white border rounded-[2rem] overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer group ${plan.popular
+                ? "border-accent/30 shadow-xl shadow-accent/10 scale-[1.02]"
+                : "border-[#E7E5E4] shadow-lg shadow-[#1C1917]/5"
+                }`}
             >
               {/* Popular Badge */}
               {plan.popular && (
@@ -147,16 +147,14 @@ export default function PricingPage() {
                 {/* Icon & Name */}
                 <div className="flex items-center gap-3 mb-4">
                   <div
-                    className={`p-2.5 rounded-xl ${
-                      plan.popular
-                        ? "bg-accent/10 border border-accent/20"
-                        : "bg-secondary/5 border border-secondary/10"
-                    }`}
+                    className={`p-2.5 rounded-xl ${plan.popular
+                      ? "bg-accent/10 border border-accent/20"
+                      : "bg-secondary/5 border border-secondary/10"
+                      }`}
                   >
                     <plan.icon
-                      className={`w-5 h-5 ${
-                        plan.popular ? "text-accent" : "text-secondary"
-                      }`}
+                      className={`w-5 h-5 ${plan.popular ? "text-accent" : "text-secondary"
+                        }`}
                     />
                   </div>
                   <div>
@@ -197,11 +195,10 @@ export default function PricingPage() {
                         </div>
                       )}
                       <span
-                        className={`text-sm ${
-                          feature.included
-                            ? "text-primary"
-                            : "text-secondary/30"
-                        }`}
+                        className={`text-sm ${feature.included
+                          ? "text-primary"
+                          : "text-secondary/30"
+                          }`}
                       >
                         {feature.name}
                       </span>
@@ -212,20 +209,19 @@ export default function PricingPage() {
                 {/* CTA Button */}
                 <button
                   onClick={() => handleSubscribe(plan.id)}
-                  className={`mt-8 w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    currentPlan === plan.id
-                      ? "bg-secondary/5 text-secondary/40 border border-secondary/10 cursor-default"
-                      : plan.popular
+                  className={`mt-8 w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${currentPlan === plan.id
+                    ? "bg-secondary/5 text-secondary/40 border border-secondary/10 cursor-default"
+                    : plan.popular
                       ? "bg-accent hover:bg-accent/90 text-white shadow-[0_0_30px_rgba(202,138,4,0.15)]"
                       : "bg-primary hover:bg-primary/90 text-white"
-                  }`}
+                    }`}
                   disabled={currentPlan === plan.id}
                 >
                   {currentPlan === plan.id ? (
                     "Current Plan"
                   ) : (
                     <>
-                      {plan.price === 0 ? "Get Started Free" : "Subscribe Now"}
+                      {plan.id === "enterprise" ? "Contact for Enterprise" : plan.price === 0 ? "Get Started Free" : "Subscribe Now"}
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}
