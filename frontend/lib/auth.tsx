@@ -11,6 +11,7 @@ interface AuthContextType {
   hotelName: string;
   plan: "starter" | "growth" | "enterprise";
   usageThisMonth: number;
+  isAdmin: boolean;
   signUp: (email: string, password: string, hotelName: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hotelName, setHotelName] = useState("");
   const [plan, setPlan] = useState<"starter" | "growth" | "enterprise">("starter");
   const [usageThisMonth, setUsageThisMonth] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setHotelName("");
           setPlan("starter");
           setUsageThisMonth(0);
+          setIsAdmin(false);
         }
       }
     );
@@ -58,10 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUserProfile = (user: User) => {
     // For MVP, read hotel name from user metadata
     const metadata = user.user_metadata;
+    const admin = metadata?.is_admin === true;
+    setIsAdmin(admin);
     setHotelName(metadata?.hotel_name || "My Hotel");
-    setPlan(metadata?.plan || "starter");
-    // Mock usage count — in production this would come from a DB query
-    setUsageThisMonth(metadata?.usage_this_month || 3);
+    // Admin users always get enterprise plan with zero usage
+    setPlan(admin ? "enterprise" : (metadata?.plan || "starter"));
+    setUsageThisMonth(admin ? 0 : (metadata?.usage_this_month || 3));
   };
 
   const signUp = async (email: string, password: string, hotel: string) => {
@@ -94,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setHotelName("");
     setPlan("starter");
     setUsageThisMonth(0);
+    setIsAdmin(false);
   };
 
   return (
@@ -105,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hotelName,
         plan,
         usageThisMonth,
+        isAdmin,
         signUp,
         signIn,
         signOut,
