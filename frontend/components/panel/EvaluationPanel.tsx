@@ -3,6 +3,7 @@
 import { RadarChart } from "../charts/RadarChart";
 import { StageData } from "@/types/stage";
 import { AlertCircle, CheckCircle2, Bot } from "lucide-react";
+import { SeoPanel } from "./SeoPanel";
 
 export const EvaluationPanel = ({ data }: { data: StageData }) => {
   const { content } = data.details;
@@ -39,6 +40,13 @@ export const EvaluationPanel = ({ data }: { data: StageData }) => {
             {content.reasoning || "No reasoning provided."}
           </p>
         </div>
+      </div>
+
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <h4 className="text-accent text-[10px] uppercase tracking-[0.2em] font-bold">
+          SEO & Lighthouse Audit
+        </h4>
+        <SeoPanel data={data} />
       </div>
     </div>
   );

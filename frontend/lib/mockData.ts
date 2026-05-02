@@ -41,8 +41,22 @@ export const getMockStageData = (query: string, hotel: string): Record<Stage, St
             completeness: 10,
             trust_signals: 15,
             value_proposition: 8,
-            structured_data_quality: 3,
+            structured_data_quality: 5,
           },
+          scores: {
+            seo: 65,
+            accessibility: 72,
+            best_practices: 60
+          },
+          issues: [
+            {
+              id: "meta-description",
+              category: "seo",
+              title: "Document does not have a meta description",
+              description: "Meta descriptions may be included in search results to concisely summarize page content.",
+              score: 0.0
+            }
+          ]
         },
       },
     },
@@ -147,6 +161,7 @@ export const getMockStageData = (query: string, hotel: string): Record<Stage, St
             value_proposition: 15,
             structured_data_quality: 8,
           },
+          optimized_html: "<html><body><h1>Mandarin Oriental, Kuala Lumpur</h1><p>Optimized SEO content here.</p></body></html>",
         },
       },
     },

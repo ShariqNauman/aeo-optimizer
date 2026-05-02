@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from src.state import AEOState
 from src.agents.web_researcher import web_researcher
 from src.agents.data_aggregation import data_aggregation
+from src.agents.seo_analyzer import seo_analyzer
 from src.agents.ai_simulator import ai_simulator
 from src.agents.gap_analyzer import gap_analyzer
 from src.agents.optimizer import optimizer
@@ -108,6 +109,7 @@ def build_graph():
     workflow.add_node("input_handler", input_handler)
     workflow.add_node("web_researcher", web_researcher)
     workflow.add_node("data_aggregation", data_aggregation)
+    workflow.add_node("seo_analyzer", seo_analyzer)
     workflow.add_node("ai_simulator", ai_simulator)
     workflow.add_node("gap_analyzer", gap_analyzer)
     workflow.add_node("optimizer", optimizer)
@@ -119,7 +121,8 @@ def build_graph():
     workflow.add_edge(START, "input_handler")
     workflow.add_edge("input_handler", "web_researcher")
     workflow.add_edge("web_researcher", "data_aggregation")
-    workflow.add_edge("data_aggregation", "ai_simulator")
+    workflow.add_edge("data_aggregation", "seo_analyzer")
+    workflow.add_edge("seo_analyzer", "ai_simulator")
     workflow.add_edge("ai_simulator", "gap_analyzer")
     workflow.add_edge("gap_analyzer", "optimizer")
     workflow.add_edge("optimizer", "validator")

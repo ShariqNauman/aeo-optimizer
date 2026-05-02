@@ -19,9 +19,15 @@ class AEOState(TypedDict, total=False):
     # ── Web Researcher output ──────────────────────────────────────────
     raw_hotel_data: dict          # Scraped/searched data from the internet
     sources: list                 # URLs of credible sources used
+    raw_html: str                 # Raw HTML from the main hotel page (Firecrawl)
     
     # ── Agent 1: Data Aggregation output ───────────────────────────────
     aggregated_profile: dict      # Cleaned, structured hotel profile
+    
+    # ── Agent 1.5: SEO Analyzer output ─────────────────────────────────
+    seo_scores: dict              # {seo: 85, accessibility: 89, best_practices: 81}
+    seo_issues: list              # Failed Lighthouse audits with details
+
     
     # ── Agent 2: AI Decision Simulator output ──────────────────────────
     evaluation_score: int         # Overall score 0-100
@@ -33,6 +39,7 @@ class AEOState(TypedDict, total=False):
     
     # ── Agent 3: Optimization Agent output ─────────────────────────────
     optimized_profile: dict       # Rewritten/enhanced hotel profile
+    optimized_html: str           # Gemini-generated SEO-optimized HTML
     
     # ── Agent 4: Validator Agent output ────────────────────────────────
     validation_passed: bool       # Did the optimized content pass QA?

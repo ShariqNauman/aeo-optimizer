@@ -10,6 +10,11 @@ outputs a new, optimized profile that resolves those weaknesses.
 from src.llm import get_llm
 from src.state import AEOState
 from src.agents.data_aggregation import HotelProfile
+from pydantic import BaseModel, Field
+
+class OptimizedHtmlOutput(BaseModel):
+    html: str = Field(description="The complete, optimized HTML string")
+
 
 
 def optimizer(state: AEOState) -> dict:
@@ -23,6 +28,9 @@ def optimizer(state: AEOState) -> dict:
     query = state.get("traveller_query", "")
     retry_count = state.get("retry_count", 0)
     validation_feedback = state.get("validation_feedback", "")
+    
+    raw_html = state.get("raw_html", "")
+    seo_issues = state.get("seo_issues", [])
     
     print(f"\n>> [Agent 3: Optimizer] Generating optimized content (Retry: {retry_count})...")
     
@@ -77,14 +85,45 @@ Respond with ONLY the JSON object."""
         if optimized is None:
             raise ValueError("LLM returned None for optimized structured output.")
             
+        optimized_profile = optimized.model_dump()
         print("   Optimization complete. Profile enhanced.")
+        
+        # Now generate optimized HTML if we have raw HTML and SEO issues
+        optimized_html = ""
+        if raw_html and seo_issues:
+            print("   [Agent 3: Optimizer] Generating SEO-optimized HTML...")
+            try:
+                html_prompt = f"""You are an expert SEO developer. Your task is to fix the following Lighthouse SEO issues in the provided HTML.
+                
+                LIGHTHOUSE ISSUES TO FIX:
+                {_format_seo_issues(seo_issues)}
+                
+                ORIGINAL HTML:
+                {raw_html[:10000]} # Truncated to fit context window
+                
+                INSTRUCTIONS:
+                1. Rewrite the HTML to fix the specified Lighthouse issues.
+                2. Ensure proper meta tags, heading hierarchy, link text, and accessibility attributes.
+                3. Keep the overall structure and design intact, only applying necessary SEO/Accessibility fixes.
+                4. Output the complete, valid HTML.
+                """
+                
+                html_llm = get_llm().with_structured_output(OptimizedHtmlOutput)
+                html_result = html_llm.invoke(html_prompt)
+                if html_result and html_result.html:
+                    optimized_html = html_result.html
+                    print("   [Agent 3: Optimizer] Optimized HTML generated.")
+            except Exception as e_html:
+                print(f"   [Warning] HTML optimization failed: {e_html}")
+        
         return {
-            "optimized_profile": optimized.model_dump(),
+            "optimized_profile": optimized_profile,
+            "optimized_html": optimized_html,
             "retry_count": retry_count + 1
         }
     except Exception as e:
         print(f"   [Error] Optimizer failed: {e}")
-        return {"optimized_profile": original_profile, "retry_count": retry_count + 1}
+        return {"optimized_profile": original_profile, "optimized_html": "", "retry_count": retry_count + 1}
 
 
 def _format_profile(profile: dict) -> str:
@@ -103,3 +142,13 @@ def _format_gaps(gaps: list[dict]) -> str:
     for i, gap in enumerate(gaps, 1):
         lines.append(f"{i}. [{gap.get('category')}] {gap.get('description')} -> FIX: {gap.get('suggested_improvement')}")
     return "\n".join(lines)
+
+
+def _format_seo_issues(issues: list[dict]) -> str:
+    if not issues:
+        return "None"
+    lines = []
+    for i, issue in enumerate(issues, 1):
+        lines.append(f"{i}. [{issue.get('category')}] {issue.get('title')}: {issue.get('description')}")
+    return "\n".join(lines)
+

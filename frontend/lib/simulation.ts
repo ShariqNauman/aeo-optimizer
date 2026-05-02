@@ -74,6 +74,9 @@ export const simulatePipeline = (
             },
           },
         };
+      } else if (agentName === "seo_analyzer") {
+        // Wait for ai_simulator to emit evaluation stage
+        stageData = null;
       } else if (agentName === "ai_simulator") {
         stageData = {
           stage: "evaluation",
@@ -86,6 +89,8 @@ export const simulatePipeline = (
               score: data.evaluation_score,
               reasoning: data.evaluation_reasoning,
               breakdown: data.sub_scores || {},
+              scores: data.seo_scores || {},
+              issues: data.seo_issues || [],
             },
           },
         };
@@ -147,6 +152,7 @@ export const simulatePipeline = (
               status: data.resim_feedback || "Ready for deployment",
               resim_feedback: data.resim_feedback,
               breakdown: data.sub_scores || {},
+              optimized_html: data.optimized_html || "",
             },
           },
         };

@@ -16,7 +16,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 
 _API_KEY = os.getenv("GOOGLE_API_KEY")
-_MODEL = "gemini-3.1-pro-preview"
+_MODEL = "gemini-3.1-flash-lite-preview"
 _SEARCH_MODEL = "gemini-3.1-flash-lite-preview"
 
 

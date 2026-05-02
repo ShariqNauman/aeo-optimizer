@@ -69,29 +69,31 @@ def scrape_main_page(app: FirecrawlApp, url: str) -> tuple[list[dict], list[str]
     scraped_pages = []
     source_urls = []
     extracted_data = {}
+    raw_html = ""
 
     try:
         print(f"   [Firecrawl] Scraping main page: {url}")
-        result = app.scrape_url(
+        result = app.v1.scrape_url(
             url,
-            params={
-                'formats': ['markdown', 'extract'],
-                'extract': {
-                    'prompt': HOTEL_EXTRACT_PROMPT,
-                    'schema': HOTEL_EXTRACT_SCHEMA,
-                }
-            }
+            formats=['markdown', 'extract', 'html'],
+            extract={
+                'prompt': HOTEL_EXTRACT_PROMPT,
+                'schema': HOTEL_EXTRACT_SCHEMA,
+            },
+            timeout=60000
         )
 
         if result:
-            # Get markdown content
+            # Get markdown and html content
             markdown = ""
             if isinstance(result, dict):
                 markdown = result.get('markdown', '') or ''
+                raw_html = result.get('html', '') or ''
                 extracted_data = result.get('extract', {}) or {}
                 metadata = result.get('metadata', {}) or {}
             else:
                 markdown = getattr(result, 'markdown', '') or ''
+                raw_html = getattr(result, 'html', '') or ''
                 extracted_data = getattr(result, 'extract', {}) or {}
                 metadata = getattr(result, 'metadata', {}) or {}
 
@@ -117,7 +119,7 @@ def scrape_main_page(app: FirecrawlApp, url: str) -> tuple[list[dict], list[str]
     except Exception as e:
         print(f"   [Warning] Main page scrape failed: {e}")
 
-    return scraped_pages, source_urls, extracted_data
+    return scraped_pages, source_urls, extracted_data, raw_html
 
 
 def crawl_subpages(app: FirecrawlApp, base_url: str) -> tuple[list[dict], list[str]]:
@@ -137,7 +139,7 @@ def crawl_subpages(app: FirecrawlApp, base_url: str) -> tuple[list[dict], list[s
 
         sub_url = base + subpage
         try:
-            result = app.scrape_url(sub_url, params={'formats': ['markdown']})
+            result = app.v1.scrape_url(sub_url, formats=['markdown'], timeout=60000)
 
             if result:
                 markdown = ""
@@ -156,6 +158,9 @@ def crawl_subpages(app: FirecrawlApp, base_url: str) -> tuple[list[dict], list[s
                 title = metadata.get('title', sub_url) if isinstance(metadata, dict) else getattr(metadata, 'title', sub_url)
                 if title is None:
                     title = sub_url
+
+                if "404" in str(title) or "Not Found" in str(title).title():
+                    continue
 
                 markdown = str(markdown)
                 markdown = re.sub(r'\n{3,}', '\n\n', markdown)
@@ -178,21 +183,21 @@ def crawl_subpages(app: FirecrawlApp, base_url: str) -> tuple[list[dict], list[s
     return scraped_pages, source_urls
 
 
-def crawl_hotel_site(url: str) -> tuple[list[dict], list[str], dict]:
+def crawl_hotel_site(url: str) -> tuple[list[dict], list[str], dict, str]:
     """
     Scrape a hotel URL using Firecrawl with targeted extraction + subpage crawling.
-    Returns (scraped_pages, source_urls, extracted_data).
+    Returns (scraped_pages, source_urls, extracted_data, raw_html).
     """
     api_key = os.getenv("FIRECRAWL_API_KEY")
     if not api_key:
         print("   [Error] FIRECRAWL_API_KEY is not set in .env")
-        return [{"url": url, "title": "Error", "snippet": "", "content": f"[Failed to crawl: Missing FIRECRAWL_API_KEY]"}], [], {}
+        return [{"url": url, "title": "Error", "snippet": "", "content": f"[Failed to crawl: Missing FIRECRAWL_API_KEY]"}], [], {}, ""
 
     try:
         app = FirecrawlApp(api_key=api_key)
 
-        # Step 1: Scrape main page with structured extraction
-        main_pages, main_urls, extracted_data = scrape_main_page(app, url)
+        # Step 1: Scrape main page with structured extraction and html
+        main_pages, main_urls, extracted_data, raw_html = scrape_main_page(app, url)
 
         # Step 2: Crawl subpages for rooms, dining, facilities
         sub_pages, sub_urls = crawl_subpages(app, url)
@@ -200,11 +205,11 @@ def crawl_hotel_site(url: str) -> tuple[list[dict], list[str], dict]:
         all_pages = main_pages + sub_pages
         all_urls = main_urls + sub_urls
 
-        return all_pages, all_urls, extracted_data
+        return all_pages, all_urls, extracted_data, raw_html
 
     except Exception as e:
         print(f"   [Error] Failed to crawl {url}: {e}")
-        return [], [], {}
+        return [], [], {}, ""
 
 
 def search_hotel_info(url: str) -> tuple[list[dict], list[str]]:
@@ -279,7 +284,7 @@ def web_researcher(state: AEOState) -> dict:
 
     # ── Crawl the hotel website with targeted extraction ──
     print(f"   Mode: Targeted Scrape + Subpage Crawl")
-    scraped_pages, source_urls, extracted_data = crawl_hotel_site(hotel_url)
+    scraped_pages, source_urls, extracted_data, raw_html = crawl_hotel_site(hotel_url)
 
     # ── Fallback if crawl failed ──
     if not scraped_pages:
@@ -306,4 +311,5 @@ def web_researcher(state: AEOState) -> dict:
             "extracted_data": extracted_data,  # Pass structured extraction to data_aggregation
         },
         "sources": source_urls,
+        "raw_html": raw_html if 'raw_html' in locals() else "",
     }

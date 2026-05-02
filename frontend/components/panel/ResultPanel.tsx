@@ -3,7 +3,7 @@
 import { StageData } from "@/types/stage";
 import { RadarChart } from "../charts/RadarChart";
 import { Button } from "../ui/Button";
-import { Database, TrendingUp, Save, CheckCircle2 } from "lucide-react";
+import { Database, TrendingUp, Save, CheckCircle2, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useSessionStore } from "@/lib/store";
@@ -89,6 +89,15 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
     }
   };
 
+  const openOptimizedHtml = () => {
+    if (!content.optimized_html) return;
+    
+    // Create a blob URL from the HTML string and open it in a new tab
+    const blob = new Blob([content.optimized_html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="flex justify-between items-start">
@@ -122,6 +131,21 @@ export const ResultPanel = ({ data }: { data: StageData }) => {
           "{content.resim_feedback || "The optimized profile significantly improves your visibility to AI agents and generative search engines."}"
         </p>
       </div>
+
+      {content.optimized_html && (
+        <div className="pt-4">
+          <Button
+            onClick={openOptimizedHtml}
+            variant="outline"
+            className="w-full py-6 text-lg group bg-white/5 hover:bg-white/10 border-white/20"
+          >
+            <span className="flex items-center gap-2">
+              View SEO-Optimized Live Preview
+              <ExternalLink className="w-5 h-5 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </Button>
+        </div>
+      )}
 
       <div className="pt-6">
         <Button

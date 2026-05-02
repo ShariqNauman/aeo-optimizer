@@ -116,7 +116,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await websocket.send_json({
                             "type": "agent_update",
                             "agent": node_name,
-                            "data": state_update
+                            "data": final_accumulated_state
                         })
                         # Allow the WebSocket to flush
                         await asyncio.sleep(0.01)
@@ -139,6 +139,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 "original_profile": final_accumulated_state.get("aggregated_profile", {}),
                 "optimized_profile": final_accumulated_state.get("optimized_profile", {}),
                 "sources": final_accumulated_state.get("sources", []),
+                "seo_scores": final_accumulated_state.get("seo_scores", {}),
+                "seo_issues": final_accumulated_state.get("seo_issues", []),
+                "optimized_html": final_accumulated_state.get("optimized_html", ""),
             }
         })
         
@@ -177,6 +180,9 @@ class SaveRecordRequest(BaseModel):
     original_profile: dict = {}
     optimized_profile: dict = {}
     sources: list = []
+    seo_scores: dict = {}
+    seo_issues: list = []
+    optimized_html: str = ""
 
 @app.post("/api/save_record")
 async def save_record(request: SaveRecordRequest):
@@ -198,6 +204,9 @@ async def save_record(request: SaveRecordRequest):
             "original_profile": request.original_profile,
             "optimized_profile": request.optimized_profile,
             "sources": request.sources,
+            "seo_scores": request.seo_scores,
+            "seo_issues": request.seo_issues,
+            "optimized_html": request.optimized_html,
         }
         result = save_optimization_record(record)
         if result:
