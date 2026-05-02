@@ -27,6 +27,7 @@ interface DiscoveryChatProps {
   viewState: ViewState;
   setViewState: (state: ViewState) => void;
   onAuthGate?: (proceedCallback: () => void, query: string) => void;
+  isAuthenticated?: boolean;
 }
 
 const MAX_QUERY_WORDS = 30;
@@ -49,7 +50,7 @@ const isValidUrl = (url: string) => {
   }
 };
 
-export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState, onAuthGate }: DiscoveryChatProps) => {
+export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState, onAuthGate, isAuthenticated }: DiscoveryChatProps) => {
   const [query, setQuery] = useState("");
   const [hotelUrl, setHotelUrl] = useState("");
   const [statusIndex, setStatusIndex] = useState(0);
@@ -88,14 +89,20 @@ export const DiscoveryChat = ({ onDiscoverWhy, viewState, setViewState, onAuthGa
   useEffect(() => {
     const pendingQuery = localStorage.getItem("weboosta_pending_query");
     if (pendingQuery) {
-      setQuery(pendingQuery);
       localStorage.removeItem("weboosta_pending_query");
-      // Use setTimeout to ensure state updates before execution
-      setTimeout(() => {
-        executeSubmit(pendingQuery);
-      }, 100);
+      if (isAuthenticated) {
+        // User just logged in — auto-resume the query
+        setQuery(pendingQuery);
+        // Use setTimeout to ensure state updates before execution
+        setTimeout(() => {
+          executeSubmit(pendingQuery);
+        }, 100);
+      } else {
+        // User pressed Back without logging in — just fill the input
+        setQuery(pendingQuery);
+      }
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const executeSubmit = async (queryToSubmit?: string) => {
     const q = queryToSubmit || query;

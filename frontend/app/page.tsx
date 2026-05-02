@@ -66,6 +66,7 @@ export default function Home() {
           setViewState={setViewState} 
           onDiscoverWhy={handleDiscoverWhy}
           onAuthGate={handleAuthGate}
+          isAuthenticated={!!user}
         />
 
         <motion.div
